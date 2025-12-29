@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NRD Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://yosbany.github.io/nrd-data-access/dist/nrd-data-access.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js"></script>
     <script>
-        // Esperar a que el DOM esté cargado
+        // Esperar a que el DOM y la librería estén cargados
         document.addEventListener('DOMContentLoaded', () => {
+            // Verificar que la librería esté disponible
+            if (typeof NRDDataAccess === 'undefined') {
+                console.error('NRDDataAccess no está disponible. Verifica que la librería se haya cargado correctamente.');
+                document.body.innerHTML = '<div class="min-h-screen flex items-center justify-center bg-red-50"><div class="text-center"><h1 class="text-2xl font-bold text-red-600 mb-2">Error</h1><p class="text-gray-700">No se pudo cargar la librería NRD Data Access</p></div></div>';
+                return;
+            }
+            
             // Inicializar NRD Data Access
             const nrd = new NRDDataAccess();
 
@@ -113,6 +120,7 @@
                     <input 
                         type="email" 
                         id="email" 
+                        autocomplete="email"
                         required
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         placeholder="usuario@email.com"
@@ -126,6 +134,7 @@
                     <input 
                         type="password" 
                         id="password" 
+                        autocomplete="current-password"
                         required
                         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                         placeholder="••••••••"

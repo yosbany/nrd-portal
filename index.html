@@ -5,112 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#dc2626">
     <title>NRD Portal</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/svg+xml" href="icon-192.svg">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js"></script>
+    <link rel="stylesheet" href="styles.css?v=1768191512037">
+    
+    <!-- Force cache reload with version parameter in URL -->
     <script>
-        // Esperar a que el DOM y la librería estén cargados
-        document.addEventListener('DOMContentLoaded', () => {
-            // Verificar que la librería esté disponible
-            if (typeof NRDDataAccess === 'undefined') {
-                console.error('NRDDataAccess no está disponible. Verifica que la librería se haya cargado correctamente.');
-                document.body.innerHTML = '<div class="min-h-screen flex items-center justify-center bg-red-50"><div class="text-center"><h1 class="text-2xl font-bold text-red-600 mb-2">Error</h1><p class="text-gray-700">No se pudo cargar la librería NRD Data Access</p></div></div>';
-                return;
-            }
-            
-            // Inicializar NRD Data Access
-            const nrd = new NRDDataAccess();
-
-            // Apps disponibles
-            const APPS = [
-                { name: "Pedidos", url: "https://yosbany.github.io/nrd-pedidos" },
-                { name: "Gestión Operativa", url: "https://yosbany.github.io/nrd-gestion-operativa" },
-                { name: "Flujo de Caja", url: "https://yosbany.github.io/nrd-flujo-caja" }
-            ];
-
-            // Elementos del DOM
-            const loginContainer = document.getElementById('login-container');
-            const portalContainer = document.getElementById('portal-container');
-            const loginForm = document.getElementById('login-form');
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
-            const errorMessage = document.getElementById('error-message');
-            const userEmail = document.getElementById('user-email');
-            const logoutBtn = document.getElementById('logout-btn');
-            const appsGrid = document.getElementById('apps-grid');
-
-            // Mostrar/ocultar vistas
-            function showLogin() {
-                loginContainer.classList.remove('hidden');
-                portalContainer.classList.add('hidden');
-            }
-
-            function showPortal() {
-                loginContainer.classList.add('hidden');
-                portalContainer.classList.remove('hidden');
-            }
-
-            // Manejar login
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
-
-                errorMessage.textContent = '';
-                errorMessage.classList.add('hidden');
-
-                try {
-                    await nrd.auth.signIn(email, password);
-                    // El estado de autenticación se manejará en onAuthStateChanged
-                } catch (error) {
-                    errorMessage.textContent = error.message || 'Error al iniciar sesión';
-                    errorMessage.classList.remove('hidden');
-                }
+      (function() {
+        // Get current version from stylesheet link (this is the source of truth)
+        const stylesheet = document.querySelector('link[href*="styles.css"]');
+        const versionMatch = stylesheet ? stylesheet.href.match(/[?&]v=(\d+)/) : null;
+        const currentVersion = versionMatch ? versionMatch[1] : Date.now();
+        
+        // Get version from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlVersion = urlParams.get('v');
+        
+        // If URL version doesn't match current version, reload with new version
+        if (urlVersion !== currentVersion) {
+          // Clear service worker cache if available
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+              }
             });
-
-            // Manejar logout
-            logoutBtn.addEventListener('click', async () => {
-                try {
-                    await nrd.auth.signOut();
-                } catch (error) {
-                    console.error('Error al cerrar sesión:', error);
-                }
+          }
+          
+          // Clear all caches
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) {
+                caches.delete(name);
+              }
             });
-
-            // Función de escape HTML
-            function escapeHtml(text) {
-                if (!text) return '';
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-
-            // Renderizar apps
-            function renderApps() {
-                appsGrid.innerHTML = APPS.map(app => `
-                    <a href="${escapeHtml(app.url)}" 
-                       class="block border border-gray-200 p-3 sm:p-4 md:p-6 hover:border-red-600 transition-colors">
-                        <h3 class="text-lg sm:text-xl font-light tracking-tight mb-2">${escapeHtml(app.name)}</h3>
-                        <p class="text-sm sm:text-base text-gray-600">Acceder a ${escapeHtml(app.name)}</p>
-                    </a>
-                `).join('');
-            }
-
-            // Escuchar cambios de autenticación
-            nrd.auth.onAuthStateChanged((user) => {
-                if (user) {
-                    userEmail.textContent = user.email;
-                    renderApps();
-                    showPortal();
-                } else {
-                    emailInput.value = '';
-                    passwordInput.value = '';
-                    errorMessage.textContent = '';
-                    errorMessage.classList.add('hidden');
-                    showLogin();
-                }
-            });
-        });
+          }
+          
+          // Reload with new version
+          const url = new URL(window.location.href);
+          url.searchParams.set('v', currentVersion);
+          window.location.replace(url.toString());
+        }
+      })();
     </script>
+    
+    <script src="https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js"></script>
+    <script src="logger.js"></script>
+    <script src="auth.js"></script>
+    <script src="app.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans antialiased">
     <!-- Vista de Login -->
@@ -131,7 +76,7 @@
                         id="email" 
                         autocomplete="email"
                         required
-                        class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-red-600 bg-white text-sm sm:text-base rounded"
+                        class="w-full px-0 py-2 border-0 border-b border-gray-300 focus:outline-none focus:border-red-600 bg-transparent text-sm sm:text-base"
                         placeholder="usuario@email.com"
                     >
                 </div>
@@ -145,7 +90,7 @@
                         id="password" 
                         autocomplete="current-password"
                         required
-                        class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-red-600 bg-white text-sm sm:text-base rounded"
+                        class="w-full px-0 py-2 border-0 border-b border-gray-300 focus:outline-none focus:border-red-600 bg-transparent text-sm sm:text-base"
                         placeholder="••••••••"
                     >
                 </div>
@@ -165,25 +110,29 @@
     <!-- Vista del Portal -->
     <div id="portal-container" class="hidden min-h-screen">
         <!-- Header -->
-        <header class="bg-red-600 border-b border-red-700">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-lg sm:text-xl font-light tracking-tight text-white">NRD Portal</h1>
-                    <div class="flex items-center gap-2 sm:gap-4">
-                        <span class="text-white/90 text-xs sm:text-sm font-light" id="user-email"></span>
-                        <button 
-                            id="logout-btn"
-                            class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light"
-                        >
-                            Cerrar Sesión
-                        </button>
-                    </div>
-                </div>
+        <header class="bg-red-600 border-b border-red-700 px-3 sm:px-4 py-2.5 sm:py-3 flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <img src="icon-192.png" alt="NRD Portal" class="w-8 h-8 sm:w-10 sm:h-10 rounded">
+                <h1 class="text-lg sm:text-xl font-light tracking-tight text-white">NRD Portal</h1>
+            </div>
+            <div class="flex gap-2 items-center">
+                <button 
+                    id="install-btn"
+                    class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light hidden"
+                >
+                    Instalar
+                </button>
+                <button 
+                    id="profile-btn"
+                    class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light"
+                >
+                    Perfil
+                </button>
             </div>
         </header>
 
         <!-- Contenido Principal -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <main class="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             <div class="mb-4 sm:mb-6">
                 <h2 class="text-lg sm:text-xl font-light tracking-tight text-gray-800 mb-2">Aplicaciones Disponibles</h2>
                 <p class="text-sm sm:text-base text-gray-600">Selecciona una aplicación para acceder</p>
@@ -194,6 +143,147 @@
             </div>
         </main>
     </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full border border-gray-200 shadow-lg">
+            <div class="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg sm:text-xl font-light tracking-tight">Perfil de Usuario</h3>
+                <button id="close-profile-modal" class="text-gray-400 hover:text-red-600 text-xl font-light">×</button>
+            </div>
+            <div id="profile-modal-content" class="p-4 sm:p-6 space-y-4">
+                <!-- User data will be inserted here -->
+            </div>
+            <div class="p-4 sm:p-6 border-t border-gray-200">
+                <button id="profile-logout-btn" 
+                    class="w-full px-4 sm:px-6 py-2 bg-red-600 text-white border border-red-600 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs sm:text-sm font-light">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => {
+                        console.log('Service Worker registered');
+                        
+                        // Check for updates every time
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New service worker available, reload page
+                                    console.log('New service worker available, reloading...');
+                                    window.location.reload();
+                                }
+                            });
+                        });
+                        
+                        // Check for updates periodically
+                        setInterval(() => {
+                            reg.update();
+                        }, 60000); // Check every minute
+                        
+                        // Force update on page load
+                        reg.update();
+                    })
+                    .catch(err => {
+                        console.log('Service Worker registration failed:', err);
+                    });
+            });
+        }
+
+        // PWA Install prompt
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('install-btn');
+
+        // Check if app is already installed
+        if (window.matchMedia('(display-mode: standalone)').matches || 
+            window.navigator.standalone === true) {
+            // App is installed, hide install button
+            if (installBtn) installBtn.classList.add('hidden');
+            console.log('App is already installed');
+        }
+
+        // Listen for beforeinstallprompt event (Chrome, Edge, etc.)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('beforeinstallprompt event fired');
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Show install button
+            if (installBtn) {
+                installBtn.classList.remove('hidden');
+                console.log('Install button shown');
+            }
+        });
+
+        // Handle install button click
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                console.log('Install button clicked');
+                
+                if (!deferredPrompt) {
+                    // Show manual install instructions
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    const isAndroid = /Android/.test(navigator.userAgent);
+                    
+                    let message = 'Para instalar la app:\n\n';
+                    if (isIOS) {
+                        message += '1. Toca el botón "Compartir" (cuadrado con flecha)\n';
+                        message += '2. Selecciona "Agregar a pantalla de inicio"\n';
+                        message += '3. Confirma la instalación';
+                    } else if (isAndroid) {
+                        message += '1. Abre el menú del navegador (3 puntos)\n';
+                        message += '2. Busca "Instalar app" o "Agregar a pantalla de inicio"\n';
+                        message += '3. Confirma la instalación';
+                    } else {
+                        message += 'Chrome: Menú → "Instalar app"\n';
+                        message += 'Safari: Compartir → "Agregar a pantalla de inicio"';
+                    }
+                    
+                    alert(message);
+                    return;
+                }
+                
+                try {
+                    // Show the install prompt
+                    deferredPrompt.prompt();
+                    
+                    // Wait for the user to respond to the prompt
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response to the install prompt: ${outcome}`);
+                    
+                    if (outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    
+                    // Clear the deferredPrompt
+                    deferredPrompt = null;
+                    
+                    // Hide install button
+                    installBtn.classList.add('hidden');
+                } catch (error) {
+                    console.error('Error showing install prompt:', error);
+                    alert('Error al mostrar la opción de instalación. Intenta desde el menú del navegador.');
+                }
+            });
+        }
+
+        // Listen for app installed event
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA was installed');
+            deferredPrompt = null;
+            if (installBtn) installBtn.classList.add('hidden');
+        });
+    </script>
 </body>
 </html>
 

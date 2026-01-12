@@ -1,0 +1,12 @@
+/* Minimal styles for NRD Portal */
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure proper rendering */
+* {
+  box-sizing: border-box;
+}
+

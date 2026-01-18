@@ -10,7 +10,7 @@
     <link rel="icon" type="image/svg+xml" href="icon-192.svg">
     <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css?v=1768191512037">
+    <link rel="stylesheet" href="styles.css?v=1768733805772">
     
     <!-- Force cache reload with version parameter in URL -->
     <script>
@@ -52,10 +52,13 @@
       })();
     </script>
     
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js"></script>
     <script src="logger.js"></script>
     <script src="auth.js"></script>
     <script src="app.js"></script>
+    <script src="fcm-tokens.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans antialiased">
     <!-- Vista de Login -->
@@ -123,6 +126,12 @@
                     Instalar
                 </button>
                 <button 
+                    id="fcm-tokens-btn"
+                    class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light"
+                >
+                    Tokens FCM
+                </button>
+                <button 
                     id="profile-btn"
                     class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light"
                 >
@@ -140,6 +149,81 @@
             
             <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <!-- Las apps se renderizarán aquí -->
+            </div>
+            
+            <!-- Vista de Gestión de Tokens FCM -->
+            <div id="fcm-tokens-view" class="hidden mt-6">
+                <div class="mb-4 sm:mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-light tracking-tight text-gray-800">Gestión de Tokens FCM</h2>
+                            <p class="text-sm sm:text-base text-gray-600">Gestiona los tokens de dispositivos para notificaciones push</p>
+                        </div>
+                        <button id="back-to-apps-btn" class="px-4 py-2 border border-gray-300 hover:border-red-600 hover:text-red-600 transition-colors uppercase tracking-wider text-xs font-light">
+                            Volver
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <button id="new-fcm-token-btn" class="px-4 py-2 bg-red-600 text-white border border-red-600 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs font-light">
+                        Nuevo Token
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <input type="text" id="fcm-tokens-search-input" placeholder="Buscar tokens..." 
+                        class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-red-600 bg-white text-sm rounded">
+                </div>
+                
+                <div id="fcm-tokens-list" class="space-y-3"></div>
+                
+                <!-- Formulario de Token -->
+                <div id="fcm-token-form" class="border border-gray-200 p-4 mt-4 hidden">
+                    <div class="mb-4 border-b border-gray-200 pb-4 flex justify-between items-center">
+                        <h3 id="fcm-token-form-title" class="text-lg font-light">Nuevo Token FCM</h3>
+                        <button id="close-fcm-token-form" class="text-gray-400 hover:text-red-600 text-xl">×</button>
+                    </div>
+                    <form id="fcm-token-form-element">
+                        <input type="hidden" id="fcm-token-id">
+                        <div class="mb-4">
+                            <label class="block mb-2 text-xs uppercase tracking-wider text-gray-600">Token FCM *</label>
+                            <input type="text" id="fcm-token-token" required 
+                                class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-red-600 bg-white text-sm">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block mb-2 text-xs uppercase tracking-wider text-gray-600">Nombre del Dispositivo</label>
+                            <input type="text" id="fcm-token-device-name" 
+                                class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-red-600 bg-white text-sm">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block mb-2 text-xs uppercase tracking-wider text-gray-600">Plataforma</label>
+                            <select id="fcm-token-platform" 
+                                class="w-full px-3 py-2 border border-gray-300 focus:outline-none focus:border-red-600 bg-white text-sm">
+                                <option value="">Seleccione...</option>
+                                <option value="android">Android</option>
+                                <option value="ios">iOS</option>
+                                <option value="web">Web</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="fcm-token-active" checked class="mr-2">
+                                <span class="text-xs uppercase tracking-wider text-gray-600">Activo</span>
+                            </label>
+                        </div>
+                        <div class="flex gap-2 pt-4 border-t border-gray-200">
+                            <button type="submit" id="save-fcm-token-btn"
+                                class="flex-1 px-4 py-2 bg-green-600 text-white border border-green-600 hover:bg-green-700 transition-colors uppercase tracking-wider text-xs font-light">
+                                Guardar
+                            </button>
+                            <button type="button" id="cancel-fcm-token-btn" 
+                                class="flex-1 px-4 py-2 border border-gray-300 hover:border-red-600 hover:text-red-600 transition-colors uppercase tracking-wider text-xs font-light">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </main>
     </div>

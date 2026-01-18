@@ -26,6 +26,142 @@ function showConfirm(title, message) {
   return confirm(message);
 }
 
+// Show notification confirmation modal (returns 'now' or 'scheduled' or null)
+function showNotificationConfirmModal() {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('notification-confirm-modal');
+    const sendNowBtn = document.getElementById('notification-send-now-btn');
+    const sendScheduledBtn = document.getElementById('notification-send-scheduled-btn');
+    const closeBtn = document.getElementById('close-notification-confirm-modal');
+
+    if (!modal || !sendNowBtn || !sendScheduledBtn || !closeBtn) {
+      // Fallback to confirm if modal elements don't exist
+      const result = confirm('¿Cómo desea enviar la notificación?\n\nAceptar = Enviar al momento (ejecutar workflow ahora)\nCancelar = Programada (se enviará en los próximos 5 minutos)');
+      resolve(result ? 'now' : 'scheduled');
+      return;
+    }
+
+    // Show modal
+    modal.classList.remove('hidden');
+
+    // Handle send now
+    const handleSendNow = () => {
+      modal.classList.add('hidden');
+      sendNowBtn.removeEventListener('click', handleSendNow);
+      sendScheduledBtn.removeEventListener('click', handleSendScheduled);
+      closeBtn.removeEventListener('click', handleCancel);
+      modal.removeEventListener('click', handleBackgroundClick);
+      resolve('now');
+    };
+
+    // Handle send scheduled
+    const handleSendScheduled = () => {
+      modal.classList.add('hidden');
+      sendNowBtn.removeEventListener('click', handleSendNow);
+      sendScheduledBtn.removeEventListener('click', handleSendScheduled);
+      closeBtn.removeEventListener('click', handleCancel);
+      modal.removeEventListener('click', handleBackgroundClick);
+      resolve('scheduled');
+    };
+
+    // Handle cancel
+    const handleCancel = () => {
+      modal.classList.add('hidden');
+      sendNowBtn.removeEventListener('click', handleSendNow);
+      sendScheduledBtn.removeEventListener('click', handleSendScheduled);
+      closeBtn.removeEventListener('click', handleCancel);
+      modal.removeEventListener('click', handleBackgroundClick);
+      resolve(null);
+    };
+
+    sendNowBtn.addEventListener('click', handleSendNow);
+    sendScheduledBtn.addEventListener('click', handleSendScheduled);
+    closeBtn.addEventListener('click', handleCancel);
+
+    // Close on background click
+    const handleBackgroundClick = (e) => {
+      if (e.target === modal) {
+        handleCancel();
+      }
+    };
+    modal.addEventListener('click', handleBackgroundClick);
+  });
+}
+
+// Show notification result modal
+function showNotificationResultModal(type, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('notification-result-modal');
+    const titleEl = document.getElementById('notification-result-title');
+    const iconEl = document.getElementById('notification-result-icon');
+    const typeEl = document.getElementById('notification-result-type').querySelector('span');
+    const messageEl = document.getElementById('notification-result-message');
+    const confirmBtn = document.getElementById('notification-result-confirm-btn');
+    const closeBtn = document.getElementById('close-notification-result-modal');
+
+    if (!modal || !titleEl || !iconEl || !typeEl || !messageEl || !confirmBtn || !closeBtn) {
+      // Fallback to alert if modal elements don't exist
+      alert(message);
+      resolve();
+      return;
+    }
+
+    // Set content based on type
+    if (type === 'manual') {
+      titleEl.textContent = 'Notificación Enviada';
+      iconEl.textContent = '✅';
+      iconEl.className = 'text-center text-4xl mb-2 text-green-600';
+      typeEl.textContent = 'Envío Manual';
+      typeEl.className = 'inline-block px-3 py-1 rounded-full text-xs font-light uppercase tracking-wider bg-blue-100 text-blue-700';
+      messageEl.textContent = message || 'La notificación se ha enviado manualmente y se procesará inmediatamente. Se enviará a todos los dispositivos registrados ahora.';
+    } else if (type === 'scheduled') {
+      titleEl.textContent = 'Notificación Programada';
+      iconEl.textContent = '⏰';
+      iconEl.className = 'text-center text-4xl mb-2 text-blue-600';
+      typeEl.textContent = 'Envío Programado';
+      typeEl.className = 'inline-block px-3 py-1 rounded-full text-xs font-light uppercase tracking-wider bg-gray-100 text-gray-700';
+      messageEl.textContent = message || 'La notificación se ha creado exitosamente. Se enviará a todos los dispositivos registrados en los próximos 5 minutos.';
+    } else if (type === 'error') {
+      titleEl.textContent = 'Error al Enviar';
+      iconEl.textContent = '❌';
+      iconEl.className = 'text-center text-4xl mb-2 text-red-600';
+      typeEl.textContent = 'Error';
+      typeEl.className = 'inline-block px-3 py-1 rounded-full text-xs font-light uppercase tracking-wider bg-red-100 text-red-700';
+      messageEl.textContent = message || 'Ocurrió un error al enviar la notificación.';
+    } else {
+      titleEl.textContent = 'Resultado';
+      iconEl.textContent = 'ℹ️';
+      iconEl.className = 'text-center text-4xl mb-2 text-gray-600';
+      typeEl.textContent = 'Información';
+      typeEl.className = 'inline-block px-3 py-1 rounded-full text-xs font-light uppercase tracking-wider bg-gray-100 text-gray-700';
+      messageEl.textContent = message || 'Operación completada.';
+    }
+
+    // Show modal
+    modal.classList.remove('hidden');
+
+    // Handle close
+    const handleClose = () => {
+      modal.classList.add('hidden');
+      confirmBtn.removeEventListener('click', handleClose);
+      closeBtn.removeEventListener('click', handleClose);
+      modal.removeEventListener('click', handleBackgroundClick);
+      resolve();
+    };
+
+    confirmBtn.addEventListener('click', handleClose);
+    closeBtn.addEventListener('click', handleClose);
+
+    // Close on background click
+    const handleBackgroundClick = (e) => {
+      if (e.target === modal) {
+        handleClose();
+      }
+    };
+    modal.addEventListener('click', handleBackgroundClick);
+  });
+}
+
 // Load FCM tokens
 function loadFCMTokens() {
   const nrd = window.nrd;
@@ -459,7 +595,29 @@ async function triggerGitHubWorkflow() {
       throw new Error(errorMessage);
     }
     
-    return await response.json();
+    // GitHub API returns 204 No Content for successful workflow_dispatch
+    // Check if response has content before trying to parse JSON
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+    
+    if (response.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+      // Success with no content (204 No Content)
+      return { success: true, message: 'Workflow triggered successfully' };
+    }
+    
+    // Try to parse JSON only if there's content
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return { success: true, message: 'Workflow triggered successfully' };
+    }
+    
+    try {
+      return await JSON.parse(text);
+    } catch (e) {
+      // If JSON parsing fails but status is OK, consider it success
+      logger.warn('Could not parse GitHub API response as JSON, but status is OK', { text, status: response.status });
+      return { success: true, message: 'Workflow triggered successfully' };
+    }
   } catch (error) {
     logger.error('GitHub workflow trigger error', error);
     throw error;
@@ -490,10 +648,15 @@ function setupNotificationFormHandler() {
       return;
     }
 
-    // Mostrar diálogo de confirmación con opciones
-    const sendOption = confirm('¿Cómo desea enviar la notificación?\n\nAceptar = Enviar al momento (ejecutar workflow ahora)\nCancelar = Programada (se enviará en los próximos 5 minutos)');
+    // Mostrar modal de confirmación con opciones
+    const sendOption = await showNotificationConfirmModal();
     
-    const sendNow = sendOption === true; // true = Aceptar (al momento), false = Cancelar (programada)
+    // Si el usuario canceló, no hacer nada
+    if (sendOption === null) {
+      return;
+    }
+    
+    const sendNow = sendOption === 'now'; // 'now' = Enviar ahora, 'scheduled' = Programado
     
     try {
       logger.debug('Sending notification', { title, message, sendNow });
@@ -504,13 +667,16 @@ function setupNotificationFormHandler() {
       if (sendNow) {
         try {
           await triggerGitHubWorkflow();
-          await showSuccess('Notificación creada y workflow ejecutado. Se enviará a todos los dispositivos registrados ahora.');
+          // Mostrar modal de resultado manual
+          await showNotificationResultModal('manual', 'La notificación se ha enviado manualmente y se procesará inmediatamente. Se enviará a todos los dispositivos registrados ahora.');
         } catch (workflowError) {
           logger.error('Failed to trigger workflow', workflowError);
-          await showError('Notificación creada pero no se pudo ejecutar el workflow: ' + workflowError.message);
+          // Mostrar modal de error pero indicando que se creó
+          await showNotificationResultModal('error', 'Notificación creada pero no se pudo ejecutar el workflow: ' + workflowError.message + '\n\nLa notificación se enviará automáticamente en los próximos 5 minutos.');
         }
       } else {
-        await showSuccess('Notificación creada exitosamente. Se enviará a todos los dispositivos registrados en los próximos 5 minutos.');
+        // Mostrar modal de resultado programado
+        await showNotificationResultModal('scheduled', 'La notificación se ha creado exitosamente. Se enviará a todos los dispositivos registrados en los próximos 5 minutos.');
       }
       
       // Reset form
@@ -518,7 +684,8 @@ function setupNotificationFormHandler() {
       hideNotificationForm();
     } catch (error) {
       logger.error('Failed to send notification', error);
-      await showError('Error al enviar notificación: ' + error.message);
+      // Mostrar modal de error
+      await showNotificationResultModal('error', 'Error al enviar notificación: ' + error.message);
     }
   });
 }

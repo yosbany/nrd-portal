@@ -176,6 +176,11 @@ function showFCMTokenForm(tokenId = null) {
   
   form.classList.remove('hidden');
   
+  // Scroll al formulario
+  setTimeout(() => {
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+  
   const formElement = document.getElementById('fcm-token-form-element');
   if (formElement) formElement.reset();
   
@@ -348,6 +353,12 @@ function showNotificationForm() {
   if (!form) return;
   
   form.classList.remove('hidden');
+  
+  // Scroll al formulario
+  setTimeout(() => {
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+  
   const formElement = document.getElementById('notification-form-element');
   if (formElement) formElement.reset();
 }
@@ -379,6 +390,82 @@ async function sendNotification(notificationData) {
   return notificationId;
 }
 
+// Get GitHub token from Firebase using nrd-data-access
+async function getGitHubToken() {
+  try {
+    const nrd = window.nrd;
+    if (!nrd) {
+      throw new Error('NRD Data Access not initialized');
+    }
+    
+    if (!nrd.config) {
+      throw new Error('ConfigService not available. Please ensure you are using the latest version of nrd-data-access library.');
+    }
+    
+    // Obtener token desde Firebase usando el servicio Config
+    const token = await nrd.config.get('githubToken');
+    
+    if (!token || typeof token !== 'string') {
+      throw new Error('Token de GitHub no configurado en Firebase');
+    }
+    
+    return token;
+  } catch (error) {
+    logger.error('Failed to get GitHub token from Firebase', error);
+    throw error;
+  }
+}
+
+// Trigger GitHub Actions workflow
+async function triggerGitHubWorkflow() {
+  const GITHUB_OWNER = 'yosbany';
+  const GITHUB_REPO = 'nrd-notificacion';
+  const WORKFLOW_FILE = 'process-notifications.yml';
+  
+  // Obtener token desde Firebase
+  let GITHUB_TOKEN;
+  try {
+    GITHUB_TOKEN = await getGitHubToken();
+  } catch (error) {
+    throw new Error('Token de GitHub no configurado en Firebase. No se puede ejecutar el workflow al momento. La notificación se enviará en los próximos 5 minutos.');
+  }
+  
+  const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/${WORKFLOW_FILE}/dispatches`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        ref: 'main'
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `GitHub API error: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.message) {
+          errorMessage = errorJson.message;
+        }
+      } catch (e) {
+        errorMessage += ` - ${errorText}`;
+      }
+      throw new Error(errorMessage);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    logger.error('GitHub workflow trigger error', error);
+    throw error;
+  }
+}
+
 // Notification form submit handler
 let notificationFormHandlerSetup = false;
 function setupNotificationFormHandler() {
@@ -403,16 +490,32 @@ function setupNotificationFormHandler() {
       return;
     }
 
+    // Mostrar diálogo de confirmación con opciones
+    const sendOption = confirm('¿Cómo desea enviar la notificación?\n\nAceptar = Enviar al momento (ejecutar workflow ahora)\nCancelar = Programada (se enviará en los próximos 5 minutos)');
+    
+    const sendNow = sendOption === true; // true = Aceptar (al momento), false = Cancelar (programada)
+    
     try {
-      logger.debug('Sending notification', { title, message });
+      logger.debug('Sending notification', { title, message, sendNow });
       const notificationId = await sendNotification({ title, message });
       logger.info('Notification created successfully', { notificationId });
+      
+      // Si es al momento, ejecutar workflow de GitHub Actions
+      if (sendNow) {
+        try {
+          await triggerGitHubWorkflow();
+          await showSuccess('Notificación creada y workflow ejecutado. Se enviará a todos los dispositivos registrados ahora.');
+        } catch (workflowError) {
+          logger.error('Failed to trigger workflow', workflowError);
+          await showError('Notificación creada pero no se pudo ejecutar el workflow: ' + workflowError.message);
+        }
+      } else {
+        await showSuccess('Notificación creada exitosamente. Se enviará a todos los dispositivos registrados en los próximos 5 minutos.');
+      }
       
       // Reset form
       formElement.reset();
       hideNotificationForm();
-      
-      await showSuccess('Notificación creada exitosamente. Se enviará a todos los dispositivos registrados en los próximos minutos.');
     } catch (error) {
       logger.error('Failed to send notification', error);
       await showError('Error al enviar notificación: ' + error.message);

@@ -10,7 +10,7 @@
     <link rel="icon" type="image/svg+xml" href="icon-192.svg">
     <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css?v=1768734704420">
+    <link rel="stylesheet" href="styles.css?v=1768735931039">
     
     <!-- Force cache reload with version parameter in URL -->
     <script>
@@ -59,7 +59,6 @@
     <script src="auth.js"></script>
     <script src="app.js"></script>
     <script src="fcm-tokens.js"></script>
-    <script src="notifications.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans antialiased">
     <!-- Vista de Login -->
@@ -127,12 +126,6 @@
                     Instalar
                 </button>
                 <button 
-                    id="send-notification-btn"
-                    class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light"
-                >
-                    Enviar Notificación
-                </button>
-                <button 
                     id="fcm-tokens-btn"
                     class="px-3 sm:px-4 py-1.5 sm:py-2 border border-white/30 hover:border-white text-white hover:bg-white/10 transition-colors uppercase tracking-wider text-xs font-light"
                 >
@@ -164,7 +157,7 @@
                     <div class="flex justify-between items-center mb-2">
                         <div>
                             <h2 class="text-lg sm:text-xl font-light tracking-tight text-gray-800">Gestión de Tokens FCM</h2>
-                            <p class="text-sm sm:text-base text-gray-600">Gestiona los tokens de dispositivos para notificaciones push</p>
+                            <p class="text-sm sm:text-base text-gray-600">Gestiona tokens y envía notificaciones a dispositivos</p>
                         </div>
                         <button id="back-to-apps-btn" class="px-4 py-2 border border-gray-300 hover:border-red-600 hover:text-red-600 transition-colors uppercase tracking-wider text-xs font-light">
                             Volver
@@ -172,9 +165,12 @@
                     </div>
                 </div>
                 
-                <div class="mb-4">
+                <div class="mb-4 flex gap-2">
                     <button id="new-fcm-token-btn" class="px-4 py-2 bg-red-600 text-white border border-red-600 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs font-light">
                         Nuevo Token
+                    </button>
+                    <button id="send-notification-btn" class="px-4 py-2 bg-green-600 text-white border border-green-600 hover:bg-green-700 transition-colors uppercase tracking-wider text-xs font-light">
+                        Enviar Notificación
                     </button>
                 </div>
                 
@@ -231,26 +227,12 @@
                         </div>
                     </form>
                 </div>
-            </div>
-            
-            <!-- Vista de Enviar Notificación -->
-            <div id="send-notification-view" class="hidden mt-6">
-                <div class="mb-4 sm:mb-6">
-                    <div class="flex justify-between items-center mb-2">
-                        <div>
-                            <h2 class="text-lg sm:text-xl font-light tracking-tight text-gray-800">Enviar Notificación</h2>
-                            <p class="text-sm sm:text-base text-gray-600">Crea una notificación que se enviará a todos los dispositivos registrados</p>
-                        </div>
-                        <button id="back-to-apps-from-notification-btn" class="px-4 py-2 border border-gray-300 hover:border-red-600 hover:text-red-600 transition-colors uppercase tracking-wider text-xs font-light">
-                            Volver
-                        </button>
-                    </div>
-                </div>
                 
                 <!-- Formulario de Notificación -->
-                <div class="border border-gray-200 p-4 max-w-2xl">
-                    <div class="mb-4 border-b border-gray-200 pb-4">
-                        <h3 class="text-lg font-light">Nueva Notificación</h3>
+                <div id="notification-form" class="border border-gray-200 p-4 mt-6 hidden">
+                    <div class="mb-4 border-b border-gray-200 pb-4 flex justify-between items-center">
+                        <h3 class="text-lg font-light">Enviar Notificación</h3>
+                        <button id="close-notification-form" class="text-gray-400 hover:text-red-600 text-xl">×</button>
                     </div>
                     <form id="notification-form-element">
                         <div class="mb-4">

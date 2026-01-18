@@ -342,9 +342,88 @@ function hideFCMTokensView() {
   if (tokensView) tokensView.classList.add('hidden');
 }
 
+// Show notification form
+function showNotificationForm() {
+  const form = document.getElementById('notification-form');
+  if (!form) return;
+  
+  form.classList.remove('hidden');
+  const formElement = document.getElementById('notification-form-element');
+  if (formElement) formElement.reset();
+}
+
+// Hide notification form
+function hideNotificationForm() {
+  const form = document.getElementById('notification-form');
+  if (form) form.classList.add('hidden');
+}
+
+// Send notification
+async function sendNotification(notificationData) {
+  const nrd = window.nrd;
+  if (!nrd) {
+    throw new Error('NRD Data Access not initialized');
+  }
+  if (!nrd.notifications) {
+    throw new Error('NotificationsService not available. Please ensure you are using the latest version of nrd-data-access library.');
+  }
+  
+  const notification = {
+    title: notificationData.title,
+    message: notificationData.message,
+    sent: false,
+    createdAt: Date.now()
+  };
+  
+  const notificationId = await nrd.notifications.create(notification);
+  return notificationId;
+}
+
+// Notification form submit handler
+let notificationFormHandlerSetup = false;
+function setupNotificationFormHandler() {
+  if (notificationFormHandlerSetup) return;
+  const formElement = document.getElementById('notification-form-element');
+  if (!formElement) return;
+  
+  notificationFormHandlerSetup = true;
+  formElement.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const title = document.getElementById('notification-title')?.value.trim();
+    const message = document.getElementById('notification-message')?.value.trim();
+
+    if (!title) {
+      await showError('El título es requerido');
+      return;
+    }
+
+    if (!message) {
+      await showError('El mensaje es requerido');
+      return;
+    }
+
+    try {
+      logger.debug('Sending notification', { title, message });
+      const notificationId = await sendNotification({ title, message });
+      logger.info('Notification created successfully', { notificationId });
+      
+      // Reset form
+      formElement.reset();
+      hideNotificationForm();
+      
+      await showSuccess('Notificación creada exitosamente. Se enviará a todos los dispositivos registrados en los próximos minutos.');
+    } catch (error) {
+      logger.error('Failed to send notification', error);
+      await showError('Error al enviar notificación: ' + error.message);
+    }
+  });
+}
+
 // Initialize FCM tokens management
 function initializeFCMTokens() {
   setupFCMTokenFormHandler();
+  setupNotificationFormHandler();
   
   // FCM Tokens button
   const fcmTokensBtn = document.getElementById('fcm-tokens-btn');
@@ -392,6 +471,30 @@ function initializeFCMTokens() {
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
       hideFCMTokenForm();
+    });
+  }
+
+  // Send notification button
+  const sendNotificationBtn = document.getElementById('send-notification-btn');
+  if (sendNotificationBtn) {
+    sendNotificationBtn.addEventListener('click', () => {
+      showNotificationForm();
+    });
+  }
+
+  // Close notification form button
+  const closeNotificationBtn = document.getElementById('close-notification-form');
+  if (closeNotificationBtn) {
+    closeNotificationBtn.addEventListener('click', () => {
+      hideNotificationForm();
+    });
+  }
+
+  // Cancel notification button
+  const cancelNotificationBtn = document.getElementById('cancel-notification-btn');
+  if (cancelNotificationBtn) {
+    cancelNotificationBtn.addEventListener('click', () => {
+      hideNotificationForm();
     });
   }
 }

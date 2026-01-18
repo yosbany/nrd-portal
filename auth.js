@@ -12,6 +12,8 @@ function initAuth() {
   }
   
   nrd = new NRDDataAccess();
+  // Expose nrd globally for other modules
+  window.nrd = nrd;
   logger.info('NRD Data Access initialized successfully');
   return nrd;
 }

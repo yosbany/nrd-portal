@@ -1,7 +1,7 @@
 // FCM Tokens management for NRD Portal
 
-// Get nrd instance safely
-var nrd = window.nrd;
+// Use nrd from global scope (exposed by auth.js)
+// nrd is available via window.nrd after initAuth() is called
 
 let fcmTokensListener = null;
 let fcmTokensSearchTerm = '';
@@ -28,6 +28,12 @@ function showConfirm(title, message) {
 
 // Load FCM tokens
 function loadFCMTokens() {
+  const nrd = window.nrd;
+  if (!nrd) {
+    logger.warn('NRD Data Access not initialized');
+    return;
+  }
+  
   logger.debug('Loading FCM tokens');
   const tokensList = document.getElementById('fcm-tokens-list');
   if (!tokensList) {
@@ -168,6 +174,8 @@ function showFCMTokenForm(tokenId = null) {
       saveBtn.classList.add('bg-blue-600', 'border-blue-600', 'hover:bg-blue-700');
     }
     (async () => {
+      const nrd = window.nrd;
+      if (!nrd) return;
       const token = await nrd.fcmTokens.getById(tokenId);
       if (token) {
         const tokenInput = document.getElementById('fcm-token-token');
@@ -198,6 +206,10 @@ function hideFCMTokenForm() {
 
 // Save token
 async function saveFCMToken(tokenId, tokenData) {
+  const nrd = window.nrd;
+  if (!nrd) {
+    throw new Error('NRD Data Access not initialized');
+  }
   if (tokenId) {
     await nrd.fcmTokens.update(tokenId, { ...tokenData, updatedAt: Date.now() });
     return { key: tokenId };
@@ -214,6 +226,12 @@ async function viewFCMToken(tokenId) {
 
 // Delete token handler
 async function deleteFCMTokenHandler(tokenId) {
+  const nrd = window.nrd;
+  if (!nrd) {
+    logger.warn('NRD Data Access not initialized');
+    return;
+  }
+  
   logger.debug('Delete FCM token requested', { tokenId });
   const confirmed = await showConfirm('Eliminar Token FCM', '¿Está seguro de eliminar este token?');
   if (!confirmed) {

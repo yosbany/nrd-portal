@@ -34,6 +34,21 @@ function loadFCMTokens() {
     return;
   }
   
+  // Check if fcmTokens service is available
+  if (!nrd.fcmTokens) {
+    logger.error('FCMTokensService not available. Please ensure you are using the latest version of nrd-data-access library.');
+    const tokensList = document.getElementById('fcm-tokens-list');
+    if (tokensList) {
+      tokensList.innerHTML = `
+        <div class="text-center py-8 border border-red-200 bg-red-50 p-4">
+          <p class="text-red-600 mb-3 text-sm font-medium">Servicio FCM Tokens no disponible</p>
+          <p class="text-gray-600 text-xs">Por favor, actualiza la librería nrd-data-access a la última versión.</p>
+        </div>
+      `;
+    }
+    return;
+  }
+  
   logger.debug('Loading FCM tokens');
   const tokensList = document.getElementById('fcm-tokens-list');
   if (!tokensList) {
@@ -175,7 +190,10 @@ function showFCMTokenForm(tokenId = null) {
     }
     (async () => {
       const nrd = window.nrd;
-      if (!nrd) return;
+      if (!nrd || !nrd.fcmTokens) {
+        logger.error('FCMTokensService not available');
+        return;
+      }
       const token = await nrd.fcmTokens.getById(tokenId);
       if (token) {
         const tokenInput = document.getElementById('fcm-token-token');
@@ -210,6 +228,9 @@ async function saveFCMToken(tokenId, tokenData) {
   if (!nrd) {
     throw new Error('NRD Data Access not initialized');
   }
+  if (!nrd.fcmTokens) {
+    throw new Error('FCMTokensService not available. Please ensure you are using the latest version of nrd-data-access library.');
+  }
   if (tokenId) {
     await nrd.fcmTokens.update(tokenId, { ...tokenData, updatedAt: Date.now() });
     return { key: tokenId };
@@ -229,6 +250,11 @@ async function deleteFCMTokenHandler(tokenId) {
   const nrd = window.nrd;
   if (!nrd) {
     logger.warn('NRD Data Access not initialized');
+    return;
+  }
+  if (!nrd.fcmTokens) {
+    logger.error('FCMTokensService not available');
+    await showError('El servicio FCM Tokens no está disponible. Por favor, actualiza la librería nrd-data-access.');
     return;
   }
   

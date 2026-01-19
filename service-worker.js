@@ -1,108 +1,185 @@
 // Service Worker for NRD Portal
 
-const CACHE_NAME = 'nrd-portal-v1';
+const CACHE_NAME = 'nrd-portal-v1-' + Date.now();
+// Get base path from service worker location
+const getBasePath = () => {
+  const path = self.location.pathname;
+  return path.substring(0, path.lastIndexOf('/') + 1);
+};
+const BASE_PATH = getBasePath();
 
-// Install event
+// Install event - skip waiting to activate immediately
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Opened cache');
-        // Cache files individually to handle failures gracefully
-        const urlsToCache = [
-          './',
-          './index.html',
-          './styles.css',
-          './app.js',
-          './auth.js',
-          './logger.js',
-          './fcm-tokens.js',
-          './manifest.json'
-        ];
-        
-        // Cache each file individually, ignoring failures
-        return Promise.allSettled(
-          urlsToCache.map(url => 
-            cache.add(url).catch(err => {
-              console.warn(`Failed to cache ${url}:`, err);
-              return null;
-            })
-          )
-        ).then(() => {
-          console.log('Cache initialization complete');
-          // Skip waiting to activate immediately
-          return self.skipWaiting();
-        });
-      })
-  );
+  self.skipWaiting();
 });
 
-// Fetch event
-self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-  
-  // Skip external requests (CDNs, etc.)
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin && !event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
-  
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
-        }
-        
-        return fetch(event.request).then((response) => {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          
-          // Clone the response
-          const responseToCache = response.clone();
-          
-          // Cache the response
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-          
-          return response;
-        }).catch(() => {
-          // Return a fallback response if network fails and not cached
-          return new Response('Offline', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({
-              'Content-Type': 'text/plain'
-            })
-          });
-        });
-      })
-  );
-});
-
-// Activate event
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
+          // Delete all old caches
+          if (cacheName.startsWith('nrd-portal-')) {
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      // Take control of all clients immediately
+      // Force all clients to reload
       return self.clients.claim();
     })
+  );
+  return self.clients.claim();
+});
+
+// Fetch event - Network first strategy for better updates
+self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Skip non-HTTP/HTTPS schemes (chrome-extension, data, blob, etc.)
+  const url = new URL(event.request.url);
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Skip service worker file itself - always fetch from network
+  if (event.request.url.includes('service-worker.js')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Skip Firebase CDN - always fetch from network
+  if (event.request.url.includes('firebasejs') || event.request.url.includes('gstatic.com')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Skip external CDNs - always fetch from network
+  if (event.request.url.includes('cdn.jsdelivr.net') || 
+      event.request.url.includes('cdn.tailwindcss.com') ||
+      event.request.url.includes('cdnjs.cloudflare.com')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Network first strategy for HTML, JS, and CSS files
+  // Always fetch from network for files with version parameters or dynamic content
+  if (event.request.url.includes('.html') || 
+      event.request.url.includes('.js') || 
+      event.request.url.includes('.css')) {
+    
+    // If URL has version parameter, always fetch from network and don't cache
+    if (event.request.url.includes('?v=') || event.request.url.includes('&v=')) {
+      event.respondWith(
+        fetch(event.request)
+          .then((response) => {
+            return response;
+          })
+          .catch(() => {
+            // If network fails, try cache without version parameter
+            const urlWithoutVersion = event.request.url.split('?')[0].split('&')[0];
+            return caches.match(urlWithoutVersion).then((cachedResponse) => {
+              if (cachedResponse) {
+                return cachedResponse;
+              }
+              // If both fail and it's a navigation request, return cached index.html
+              if (event.request.mode === 'navigate') {
+                return caches.match(BASE_PATH + 'index.html');
+              }
+            });
+          })
+      );
+      return;
+    }
+    
+    // For files without version, use network first but cache for offline
+    event.respondWith(
+      fetch(event.request, { cache: 'no-store' })
+        .then((response) => {
+          // Handle navigation requests - if 404, return index.html
+          if (event.request.mode === 'navigate') {
+            if (!response || response.status === 404) {
+              return caches.match(BASE_PATH + 'index.html').then((cachedIndex) => {
+                if (cachedIndex) {
+                  return cachedIndex;
+                }
+                // If index.html not in cache, try network fetch
+                return fetch(BASE_PATH + 'index.html').catch(() => {
+                  return response; // Fallback to original response
+                });
+              });
+            }
+          }
+          // Don't cache HTML, JS, CSS files - always fetch fresh
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try cache
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // If both fail and it's a navigation request, return cached index.html
+            if (event.request.mode === 'navigate') {
+              return caches.match(BASE_PATH + 'index.html').then((cachedIndex) => {
+                if (cachedIndex) {
+                  return cachedIndex;
+                }
+                // Last resort: try to fetch index.html from network
+                return fetch(BASE_PATH + 'index.html').catch(() => {
+                  // Return a fallback response if all fails
+                  return new Response('Offline', {
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                    headers: new Headers({
+                      'Content-Type': 'text/plain'
+                    })
+                  });
+                });
+              });
+            }
+          });
+        })
+    );
+    return;
+  }
+
+  // For other resources, try cache first, then network
+  event.respondWith(
+    caches.match(event.request)
+      .then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(event.request).then((response) => {
+          // Handle navigation requests - if 404, return index.html
+          if (event.request.mode === 'navigate') {
+            if (!response || response.status === 404) {
+              return caches.match(BASE_PATH + 'index.html').then((cachedIndex) => {
+                if (cachedIndex) {
+                  return cachedIndex;
+                }
+                return fetch(BASE_PATH + 'index.html').catch(() => response);
+              });
+            }
+          }
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache).catch((err) => {
+                console.warn('Failed to cache:', event.request.url, err);
+              });
+            }).catch((err) => {
+              console.warn('Failed to open cache:', err);
+            });
+          }
+          return response;
+        });
+      })
   );
 });
 

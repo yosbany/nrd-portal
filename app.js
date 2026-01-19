@@ -7,7 +7,8 @@ const APPS = [
   { name: "Flujo de Caja", url: "https://yosbany.github.io/nrd-flujo-caja" },
   { name: "Control de Cajas", url: "https://yosbany.github.io/nrd-control-cajas" },
   { name: "Costos", url: "https://yosbany.github.io/nrd-costos" },
-  { name: "RRHH", url: "https://yosbany.github.io/nrd-rrhh" }
+  { name: "RRHH", url: "https://yosbany.github.io/nrd-rrhh" },
+  { name: "Productos", url: "https://yosbany.github.io/nrd-productos" }
 ];
 
 // Initialize app

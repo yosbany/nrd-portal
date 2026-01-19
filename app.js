@@ -2,13 +2,14 @@
 
 // Apps disponibles
 const APPS = [
-  { name: "Pedidos", url: "https://yosbany.github.io/nrd-pedidos" },
-  { name: "Gestión Operativa", url: "https://yosbany.github.io/nrd-gestion-operativa" },
-  { name: "Flujo de Caja", url: "https://yosbany.github.io/nrd-flujo-caja" },
-  { name: "Control de Cajas", url: "https://yosbany.github.io/nrd-control-cajas" },
-  { name: "Costos", url: "https://yosbany.github.io/nrd-costos" },
-  { name: "RRHH", url: "https://yosbany.github.io/nrd-rrhh" },
-  { name: "Productos", url: "https://yosbany.github.io/nrd-productos" }
+  { name: "Pedidos", url: "https://yosbany.github.io/nrd-pedidos", icon: "📦" },
+  { name: "Gestión Operativa", url: "https://yosbany.github.io/nrd-gestion-operativa", icon: "⚙️" },
+  { name: "Flujo de Caja", url: "https://yosbany.github.io/nrd-flujo-caja", icon: "💰" },
+  { name: "Control de Cajas", url: "https://yosbany.github.io/nrd-control-cajas", icon: "📊" },
+  { name: "Costos", url: "https://yosbany.github.io/nrd-costos", icon: "💵" },
+  { name: "RRHH", url: "https://yosbany.github.io/nrd-rrhh", icon: "👥" },
+  { name: "Productos", url: "https://yosbany.github.io/nrd-productos", icon: "📋" },
+  { name: "Compras", url: "https://yosbany.github.io/nrd-compras", icon: "🛒" }
 ];
 
 // Initialize app
@@ -83,8 +84,15 @@ function initApp() {
     appsGrid.innerHTML = APPS.map(app => `
       <a href="${escapeHtml(app.url)}" 
          class="block border border-gray-200 p-3 sm:p-4 md:p-6 hover:border-red-600 transition-colors">
-        <h3 class="text-lg sm:text-xl font-light tracking-tight mb-2">${escapeHtml(app.name)}</h3>
-        <p class="text-sm sm:text-base text-gray-600">Acceder a ${escapeHtml(app.name)}</p>
+        <div class="flex items-center gap-3 sm:gap-4 mb-3">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-2xl sm:text-3xl">${app.icon || "📱"}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-lg sm:text-xl font-light tracking-tight mb-1">${escapeHtml(app.name)}</h3>
+            <p class="text-sm sm:text-base text-gray-600">Acceder a ${escapeHtml(app.name)}</p>
+          </div>
+        </div>
       </a>
     `).join('');
     logger.debug('Apps grid rendered successfully');

@@ -44,6 +44,12 @@ function initApp() {
     logger.debug('Showing portal view');
     if (loginContainer) loginContainer.classList.add('hidden');
     if (portalContainer) portalContainer.classList.remove('hidden');
+    // Setup profile modal listeners when portal is shown
+    if (typeof setupProfileModalListeners === 'function') {
+      setTimeout(() => {
+        setupProfileModalListeners();
+      }, 100);
+    }
   }
 
   // Handle login

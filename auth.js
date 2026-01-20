@@ -129,34 +129,83 @@ function closeProfileModal() {
   }
 }
 
-// Profile button handler
-const profileBtn = document.getElementById('profile-btn');
-if (profileBtn) {
-  profileBtn.addEventListener('click', () => {
-    showProfileModal();
-  });
-}
+// Setup profile modal event listeners
+let profileModalListenersSetup = false;
+function setupProfileModalListeners() {
+  logger.debug('Setting up profile modal event listeners');
+  
+  // Profile button handler
+  const profileBtn = document.getElementById('profile-btn');
+  if (profileBtn && !profileBtn.hasAttribute('data-listener-attached')) {
+    profileBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      logger.debug('Profile button clicked');
+      showProfileModal();
+    });
+    profileBtn.setAttribute('data-listener-attached', 'true');
+    logger.debug('Profile button listener attached');
+  } else if (!profileBtn) {
+    logger.warn('Profile button not found');
+  }
 
-// Close profile modal button
-const closeProfileModalBtn = document.getElementById('close-profile-modal');
-if (closeProfileModalBtn) {
-  closeProfileModalBtn.addEventListener('click', () => {
-    closeProfileModal();
-  });
-}
-
-// Logout handler (from profile modal)
-const profileLogoutBtn = document.getElementById('profile-logout-btn');
-if (profileLogoutBtn) {
-  profileLogoutBtn.addEventListener('click', async () => {
-    try {
-      logger.debug('Profile logout button clicked');
+  // Close profile modal button
+  const closeProfileModalBtn = document.getElementById('close-profile-modal');
+  if (closeProfileModalBtn && !closeProfileModalBtn.hasAttribute('data-listener-attached')) {
+    closeProfileModalBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      logger.debug('Close profile modal button clicked');
       closeProfileModal();
-      await signOut();
-    } catch (error) {
-      logger.error('Error during logout', error);
-      alert('Error al cerrar sesión: ' + error.message);
-    }
+    });
+    closeProfileModalBtn.setAttribute('data-listener-attached', 'true');
+    logger.debug('Close profile modal button listener attached');
+  } else if (!closeProfileModalBtn) {
+    logger.warn('Close profile modal button not found');
+  }
+
+  // Logout handler (from profile modal)
+  const profileLogoutBtn = document.getElementById('profile-logout-btn');
+  if (profileLogoutBtn && !profileLogoutBtn.hasAttribute('data-listener-attached')) {
+    profileLogoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        logger.debug('Profile logout button clicked');
+        closeProfileModal();
+        await signOut();
+      } catch (error) {
+        logger.error('Error during logout', error);
+        alert('Error al cerrar sesión: ' + error.message);
+      }
+    });
+    profileLogoutBtn.setAttribute('data-listener-attached', 'true');
+    logger.debug('Profile logout button listener attached');
+  } else if (!profileLogoutBtn) {
+    logger.warn('Profile logout button not found');
+  }
+  
+  // Also handle click on modal background to close
+  const profileModal = document.getElementById('profile-modal');
+  if (profileModal && !profileModal.hasAttribute('data-listener-attached')) {
+    profileModal.addEventListener('click', (e) => {
+      if (e.target === profileModal) {
+        logger.debug('Profile modal background clicked');
+        closeProfileModal();
+      }
+    });
+    profileModal.setAttribute('data-listener-attached', 'true');
+    logger.debug('Profile modal background click listener attached');
+  }
+  
+  profileModalListenersSetup = true;
+  logger.debug('Profile modal listeners setup completed');
+}
+
+// Initialize profile modal listeners when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(setupProfileModalListeners, 100);
   });
+} else {
+  // DOM is already ready, but wait a bit to ensure all elements are available
+  setTimeout(setupProfileModalListeners, 100);
 }
 

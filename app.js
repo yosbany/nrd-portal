@@ -9,7 +9,8 @@ const APPS = [
   { name: "Costos", url: "https://yosbany.github.io/nrd-costos", icon: "💵" },
   { name: "RRHH", url: "https://yosbany.github.io/nrd-rrhh", icon: "👥" },
   { name: "Productos", url: "https://yosbany.github.io/nrd-productos", icon: "📋" },
-  { name: "Compras", url: "https://yosbany.github.io/nrd-compras", icon: "🛒" }
+  { name: "Compras", url: "https://yosbany.github.io/nrd-compras", icon: "🛒" },
+  { name: "Administración de Datos", url: "https://yosbany.github.io/nrd-data-access", icon: "🗄️" }
 ];
 
 // Initialize app

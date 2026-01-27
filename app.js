@@ -1,144 +1,88 @@
-// Main app controller for NRD Portal
+// Main app controller (ES Module)
+// Using NRDCommon from CDN (loaded in index.html)
+const logger = window.logger || console;
 
-// Apps disponibles
-const APPS = [
-  { name: "Pedidos", url: "https://yosbany.github.io/nrd-pedidos", icon: "📦" },
-  { name: "Gestión Operativa", url: "https://yosbany.github.io/nrd-gestion-operativa", icon: "⚙️" },
-  { name: "Flujo de Caja", url: "https://yosbany.github.io/nrd-flujo-caja", icon: "💰" },
-  { name: "Control de Cajas", url: "https://yosbany.github.io/nrd-control-cajas", icon: "📊" },
-  { name: "Costos", url: "https://yosbany.github.io/nrd-costos", icon: "💵" },
-  { name: "RRHH", url: "https://yosbany.github.io/nrd-rrhh", icon: "👥" },
-  { name: "Productos", url: "https://yosbany.github.io/nrd-productos", icon: "📋" },
-  { name: "Compras", url: "https://yosbany.github.io/nrd-compras", icon: "🛒" },
-  { name: "Administración de Datos", url: "https://yosbany.github.io/nrd-data-access", icon: "🗄️" }
-];
+import { initializePortal } from './views/portal/portal.js';
 
-// Initialize app
-function initApp() {
-  logger.info('Initializing NRD Portal app');
+// Initialize app using NRD Data Access
+// Note: AuthService handles showing/hiding app-screen, we just setup portal content
+logger.info('app.js loaded, waiting for NRD to be available');
+
+// Wait for window.nrd and NRDCommon to be available (they're initialized in index.html)
+function waitForNRDAndInitialize() {
+  const maxWait = 10000; // 10 seconds
+  const startTime = Date.now();
+  const checkInterval = 100; // Check every 100ms
   
-  // Initialize auth
-  const nrd = initAuth();
-  if (!nrd) {
-    logger.error('Failed to initialize app: NRD Data Access not available');
-    return;
-  }
-
-  logger.debug('Getting DOM elements');
-  // Get DOM elements
-  const loginContainer = document.getElementById('login-container');
-  const portalContainer = document.getElementById('portal-container');
-  const loginForm = document.getElementById('login-form');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
-  const errorMessage = document.getElementById('error-message');
-  const appsGrid = document.getElementById('apps-grid');
-
-  // Show/hide views
-  function showLogin() {
-    logger.debug('Showing login view');
-    if (loginContainer) loginContainer.classList.remove('hidden');
-    if (portalContainer) portalContainer.classList.add('hidden');
-  }
-
-  function showPortal() {
-    logger.debug('Showing portal view');
-    if (loginContainer) loginContainer.classList.add('hidden');
-    if (portalContainer) portalContainer.classList.remove('hidden');
-    // Setup profile modal listeners when portal is shown
-    if (typeof setupProfileModalListeners === 'function') {
-      setTimeout(() => {
-        setupProfileModalListeners();
-      }, 100);
-    }
-  }
-
-  // Handle login
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = emailInput?.value.trim();
-      const password = passwordInput?.value;
-
-      logger.debug('Login form submitted', { email });
-
-      if (errorMessage) {
-        errorMessage.textContent = '';
-        errorMessage.classList.add('hidden');
+  const checkNRD = setInterval(() => {
+    const nrd = window.nrd;
+    const NRDCommon = window.NRDCommon;
+    
+    if (nrd && nrd.auth && NRDCommon) {
+      clearInterval(checkNRD);
+      logger.info('NRD, auth, and NRDCommon available, setting up onAuthStateChanged');
+      
+      // Also listen to the current auth state immediately
+      const currentUser = nrd.auth.getCurrentUser();
+      if (currentUser) {
+        logger.info('Current user found, initializing immediately', { uid: currentUser.uid, email: currentUser.email });
+        initializeAppForUser(currentUser);
       }
-
-      try {
-        await signIn(email, password);
-        // El estado de autenticación se manejará en onAuthStateChanged
-      } catch (error) {
-        logger.error('Login form error', error);
-        if (errorMessage) {
-          errorMessage.textContent = error.message || 'Error al iniciar sesión';
-          errorMessage.classList.remove('hidden');
+      
+      nrd.auth.onAuthStateChanged((user) => {
+        logger.info('Auth state changed', { hasUser: !!user, uid: user?.uid, email: user?.email });
+        if (user) {
+          initializeAppForUser(user);
+        } else {
+          logger.debug('User not authenticated, app initialization skipped');
         }
-      }
-    });
-    logger.debug('Login form event listener attached');
-  }
-
-  // Render apps
-  function renderApps() {
-    logger.debug('Rendering apps grid', { appCount: APPS.length });
-    if (!appsGrid) {
-      logger.warn('Apps grid element not found');
-      return;
+      });
+    } else if (Date.now() - startTime >= maxWait) {
+      clearInterval(checkNRD);
+      logger.error('NRD, auth, or NRDCommon not available after timeout', { 
+        hasNrd: !!nrd, 
+        hasAuth: !!(nrd && nrd.auth),
+        hasNRDCommon: !!NRDCommon
+      });
     }
-    appsGrid.innerHTML = APPS.map(app => `
-      <a href="${escapeHtml(app.url)}" 
-         class="block border border-gray-200 p-3 sm:p-4 md:p-6 hover:border-red-600 transition-colors">
-        <div class="flex items-center gap-3 sm:gap-4 mb-3">
-          <div class="w-12 h-12 sm:w-14 sm:h-14 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <span class="text-2xl sm:text-3xl">${app.icon || "📱"}</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-lg sm:text-xl font-light tracking-tight mb-1">${escapeHtml(app.name)}</h3>
-            <p class="text-sm sm:text-base text-gray-600">Acceder a ${escapeHtml(app.name)}</p>
-          </div>
-        </div>
-      </a>
-    `).join('');
-    logger.debug('Apps grid rendered successfully');
-  }
+  }, checkInterval);
+}
 
-  // Listen for auth state changes
-  logger.debug('Setting up auth state change listener');
-  onAuthStateChanged((user) => {
-    if (user) {
-      logger.info('User authenticated, showing portal', { uid: user.uid, email: user.email });
-      renderApps();
-      showPortal();
-    } else {
-      logger.info('User not authenticated, showing login');
-      if (emailInput) emailInput.value = '';
-      if (passwordInput) passwordInput.value = '';
-      if (errorMessage) {
-        errorMessage.textContent = '';
-        errorMessage.classList.add('hidden');
-      }
-      showLogin();
-    }
-  });
+// Start waiting for NRD and NRDCommon
+waitForNRDAndInitialize();
+
+function initializeAppForUser(user) {
+  logger.info('Initializing app for user', { uid: user.uid, email: user.email });
   
-  logger.info('NRD Portal app initialized successfully');
+  // Ensure app-screen is visible (AuthService should have done this, but double-check)
+  const appScreen = document.getElementById('app-screen');
+  const loginScreen = document.getElementById('login-screen');
+  const redirectingScreen = document.getElementById('redirecting-screen');
+  
+  if (appScreen) {
+    appScreen.classList.remove('hidden');
+    logger.info('App screen shown');
+  }
+  if (loginScreen) {
+    loginScreen.classList.add('hidden');
+  }
+  if (redirectingScreen) {
+    redirectingScreen.classList.add('hidden');
+  }
+  
+  // Wait a bit for DOM to be ready, then initialize portal view
+  setTimeout(() => {
+    initializePortal();
+    
+    // Double-check that app-screen is visible
+    const appScreenCheck = document.getElementById('app-screen');
+    if (appScreenCheck && appScreenCheck.classList.contains('hidden')) {
+      logger.warn('App screen was hidden, showing it now');
+      appScreenCheck.classList.remove('hidden');
+    }
+  }, 300);
 }
 
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
-}
-
+// AuthService is now initialized in index.html after NRDCommon loads
+// This ensures it handles the redirecting screen immediately
+// We don't need to initialize it here since it's already done in index.html

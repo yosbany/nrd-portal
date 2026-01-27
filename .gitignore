@@ -1,6 +1,40 @@
+# OS files
 .DS_Store
-node_modules/
-*.log
-.env
-.idea/
+Thumbs.db
+
+# IDE files
 .vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+ENV/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+*.cache
+
+# Service worker cache
+sw-cache/
+
+# Environment
+.env
+.env.local
+
+# Node modules (if any)
+node_modules/

@@ -1,2 +1,2 @@
 // Portal view - Barrel export
-export { initializePortal } from './portal.js';
+export { initializeInicio, initializeCalculadoras } from './portal.js';

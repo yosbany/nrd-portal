@@ -10,3 +10,45 @@ body {
   box-sizing: border-box;
 }
 
+/* Alinear inputs numéricos a la derecha (incl. Sueldo declarado) */
+input.mo-sueldo-declarado,
+input.mo-sueldo,
+input.mo-horas-dia,
+input.mo-dias-mes {
+  text-align: right;
+}
+
+/* Print: solo el área de la calculadora (sin botón imprimir) */
+@media print {
+  #app-header-container,
+  #app-nav-container,
+  #inicio-view,
+  #calculadoras-sub-nav,
+  #calc-pv-imprimir,
+  #calc-mo-imprimir,
+  #gf-imprimir {
+    display: none !important;
+  }
+
+  #app-screen {
+    padding: 0 !important;
+  }
+
+  main {
+    padding: 0.5rem !important;
+    max-width: none !important;
+  }
+
+  #calculadoras-view {
+    display: block !important;
+  }
+
+  #calculadoras-view.hidden {
+    display: block !important;
+  }
+
+  #calculadoras-content {
+    display: block !important;
+  }
+}
+

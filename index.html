@@ -29,7 +29,7 @@
     // Ensure a global logger exists early so libraries can reference it safely
     window.logger = window.logger || console;
   </script>
-  <link rel="stylesheet" href="assets/styles/styles.css?v=1769519522820">
+  <link rel="stylesheet" href="assets/styles/styles.css?v=1770063428273">
   <meta name="theme-color" content="#dc2626">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
@@ -108,16 +108,34 @@
     <!-- Header will be inserted here by NRDCommon -->
     <div id="app-header-container" data-app-name="NRD Portal" data-icon-path="assets/icons/icon-192.png"></div>
 
-    <main class="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto max-w-6xl mx-auto w-full">
-      <!-- Portal View -->
-      <div id="portal-view" class="view space-y-3 sm:space-y-4">
-        <div class="mb-4 sm:mb-6">
-          <h2 class="text-lg sm:text-xl font-light tracking-tight text-gray-800 mb-2">Aplicaciones Disponibles</h2>
-          <p class="text-sm sm:text-base text-gray-600">Selecciona una aplicación para acceder</p>
-        </div>
-        
+    <!-- Navigation will be inserted here by app.js -->
+    <nav id="app-nav-container" class="bg-white border-b border-gray-200 flex overflow-x-auto"></nav>
+
+    <main class="flex-1 p-3 sm:p-4 md:p-6 w-full">
+      <!-- Inicio View - Aplicaciones disponibles -->
+      <div id="inicio-view" class="view">
         <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <!-- Las apps se renderizarán aquí -->
+        </div>
+      </div>
+
+      <!-- Calculadoras View -->
+      <div id="calculadoras-view" class="view space-y-3 sm:space-y-4 hidden">
+        <!-- Sub-tabs para calculadoras -->
+        <nav id="calculadoras-sub-nav" class="flex border-b border-gray-200 mb-4 overflow-x-auto">
+          <button type="button" class="calc-sub-btn px-3 sm:px-4 py-2 sm:py-2.5 border-b-2 border-red-600 text-red-600 font-medium whitespace-nowrap text-xs sm:text-sm uppercase tracking-wider" data-calc="precio-venta">
+            Precio de venta
+          </button>
+          <button type="button" class="calc-sub-btn px-3 sm:px-4 py-2 sm:py-2.5 border-b-2 border-transparent text-gray-600 hover:text-red-600 whitespace-nowrap text-xs sm:text-sm uppercase tracking-wider" data-calc="mano-obra">
+            Costo mano de obra
+          </button>
+          <button type="button" class="calc-sub-btn px-3 sm:px-4 py-2 sm:py-2.5 border-b-2 border-transparent text-gray-600 hover:text-red-600 whitespace-nowrap text-xs sm:text-sm uppercase tracking-wider" data-calc="gf-por-hora">
+            Gastos fijos por hora
+          </button>
+        </nav>
+        <!-- Contenedor de calculadoras -->
+        <div id="calculadoras-content">
+          <!-- Se renderiza dinámicamente por portal.js -->
         </div>
       </div>
     </main>
@@ -172,7 +190,7 @@
                          window.location.hostname === '0.0.0.0';
       
       const nrdDataAccessSrc = isLocalhost 
-        ? '/nrd-data-access/dist/nrd-data-access.js?v=1769519522820'
+        ? '/nrd-data-access/dist/nrd-data-access.js?v=1770063428273'
         : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js';
       
       console.log('Loading NRD Data Access from:', nrdDataAccessSrc);
@@ -197,7 +215,7 @@
                          window.location.hostname === '0.0.0.0';
       
       const nrdCommonSrc = isLocalhost 
-        ? '/nrd-common/dist/nrd-common.js?v=1769519522820'
+        ? '/nrd-common/dist/nrd-common.js?v=1770063428273'
         : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-common@main/dist/nrd-common.js';
       
       console.log('Loading NRD Common from:', nrdCommonSrc);
@@ -325,7 +343,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js?v=1769519522820')
+        navigator.serviceWorker.register('service-worker.js?v=1770063428273')
           .then(reg => {
             console.log('Service Worker registered');
             
@@ -357,6 +375,6 @@
   </script>
 
   <!-- App.js Module -->
-  <script type="module" src="app.js?v=1769519522820"></script>
+  <script type="module" src="app.js?v=1770063428273"></script>
 </body>
 </html>

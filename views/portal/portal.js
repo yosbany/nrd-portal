@@ -121,12 +121,12 @@ function renderCalculatorContent(calcId, options = {}) {
     container.innerHTML = getManoObraCalculatorHTML();
     setupManoObraHandlers();
   } else if (calcId === 'gf-por-hora') {
-    container.innerHTML = getGFPorHoraCalculatorHTML();
     let preservedHoras = options.preservedHoras;
     if (preservedHoras == null) {
       const saved = loadFromStorage(LS_KEY_GF);
-      preservedHoras = (saved && saved.horas != null && saved.horas !== '') ? saved.horas : null;
+      preservedHoras = (saved && saved.horas != null && saved.horas !== '') ? String(saved.horas) : '';
     }
+    container.innerHTML = getGFPorHoraCalculatorHTML(preservedHoras || undefined);
     setupGFPorHoraHandlers(preservedHoras ? { preservedHoras } : null);
   }
 }
@@ -347,7 +347,7 @@ function getManoObraCalculatorHTML() {
 let gfPorHoraGastos = [{ id: 1, nombre: '', monto: 0, porcentaje: 100 }];
 let gfPorHoraListenersSetup = false;
 
-function getGFPorHoraCalculatorHTML() {
+function getGFPorHoraCalculatorHTML(initialHoras) {
   const esc = (t) => {
     if (t == null || t === '') return '';
     const d = document.createElement('div');
@@ -412,7 +412,7 @@ function getGFPorHoraCalculatorHTML() {
         </div>
         <div class="pt-2 w-full max-w-md">
           <label class="block text-xs uppercase tracking-wider text-red-900/80 font-medium mb-1.5">Horas del mes</label>
-          <input type="number" id="gf-horas" step="0.01" min="0" placeholder="Ej: 160" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/30">
+          <input type="number" id="gf-horas" step="0.01" min="0" placeholder="Ej: 160" value="${(typeof initialHoras !== 'undefined' && initialHoras !== null && initialHoras !== '') ? String(initialHoras) : ''}" class="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/30">
         </div>
         <div id="gf-resultados" class="pt-4 mt-4 border-t-2 border-red-100 space-y-3 hidden">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2 text-sm">
@@ -680,34 +680,36 @@ function setupGFPorHoraHandlers(opts) {
       if (cell && detalle[i]) cell.textContent = formatCur(detalle[i].montoProductivo);
     });
 
-    const horas = parseFloat(horasInput?.value) || 0;
+    const currentHorasInput = document.getElementById('gf-horas');
+    const horasVal = parseFloat(currentHorasInput?.value) || 0;
+    const horasToSave = (currentHorasInput?.value != null && currentHorasInput.value !== '') ? String(currentHorasInput.value) : '';
 
-    if (horas <= 0) {
+    if (horasVal <= 0) {
       if (resultadosDiv) resultadosDiv.classList.add('hidden');
       if (errorDiv) {
         errorDiv.textContent = 'Ingrese horas mayores a 0';
         errorDiv.classList.remove('hidden');
       }
-      saveToStorage(LS_KEY_GF, { gastos, horas: horasInput?.value ?? '' });
+      saveToStorage(LS_KEY_GF, { gastos, horas: horasToSave });
       return;
     }
 
     if (errorDiv) errorDiv.classList.add('hidden');
 
     const totalProductivo = detalle.reduce((s, g) => s + g.montoProductivo, 0);
-    const gfPorHora = totalProductivo / horas;
+    const gfPorHora = totalProductivo / horasVal;
 
     const totalEl = document.getElementById('gf-total-productivo');
     const horasEl = document.getElementById('gf-horas-display');
     const resultadoEl = document.getElementById('gf-por-hora-resultado');
 
     if (totalEl) totalEl.textContent = formatCur(totalProductivo);
-    if (horasEl) horasEl.textContent = `${horas.toFixed(2)} h`;
+    if (horasEl) horasEl.textContent = `${horasVal.toFixed(2)} h`;
     if (resultadoEl) resultadoEl.textContent = `$${Math.round(gfPorHora).toLocaleString('es-CL')}`;
 
     if (resultadosDiv) resultadosDiv.classList.remove('hidden');
 
-    saveToStorage(LS_KEY_GF, { gastos, horas: horasInput?.value ?? '' });
+    saveToStorage(LS_KEY_GF, { gastos, horas: horasToSave });
   };
 
   addBtn?.addEventListener('click', () => {
@@ -771,6 +773,7 @@ function setupGFPorHoraHandlers(opts) {
 
   horasInput?.addEventListener('input', recalc);
   horasInput?.addEventListener('change', recalc);
+  horasInput?.addEventListener('blur', recalc);
 
   if (horasInput && preservedHoras) horasInput.value = preservedHoras;
   recalc();

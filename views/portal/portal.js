@@ -17,6 +17,7 @@ const APPS_CONFIG = [
   { name: "RRHH", localPath: "/nrd-rrhh/", remoteUrl: "https://yosbany.github.io/nrd-rrhh", icon: "👥" },
   { name: "Productos", localPath: "/nrd-productos/", remoteUrl: "https://yosbany.github.io/nrd-productos", icon: "📋" },
   { name: "Compras", localPath: "/nrd-compras/", remoteUrl: "https://yosbany.github.io/nrd-compras", icon: "🛒" },
+  { name: "Catálogo", localPath: "/nrd-catalogo/", remoteUrl: "https://yosbany.github.io/nrd-catalogo", icon: "📚" },
   { name: "Administración de Datos", localPath: "/nrd-data-access/", remoteUrl: "https://yosbany.github.io/nrd-data-access", icon: "🗄️" }
 ];
 

@@ -29,42 +29,67 @@
     // Ensure a global logger exists early so libraries can reference it safely
     window.logger = window.logger || console;
   </script>
-  <link rel="stylesheet" href="assets/styles/styles.css?v=1770937502164">
+  <link rel="stylesheet" href="assets/styles/styles.css?v=1771025674933">
   <meta name="theme-color" content="#dc2626">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
   
-  <!-- Force cache reload with version parameter in URL -->
+  <!-- Validate version against server: if server has newer build, force reload to avoid stale cache -->
   <script>
     (function() {
-      const stylesheet = document.querySelector('link[href*="assets/styles/styles.css"]');
-      const versionMatch = stylesheet ? stylesheet.href.match(/[?&]v=(\d+)/) : null;
-      const currentVersion = versionMatch ? versionMatch[1] : Date.now();
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlVersion = urlParams.get('v');
-      
-      if (urlVersion !== currentVersion) {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) {
-              registration.unregister();
-            }
-          });
+      var link = document.querySelector('link[rel="stylesheet"][href*=".css"]');
+      var localVersion = link && link.href.match(/[?&]v=(\d+)/) ? link.href.match(/[?&]v=(\d+)/)[1] : null;
+      var urlParams = new URLSearchParams(window.location.search);
+      var urlVersion = urlParams.get('v');
+
+      function applyUrlSync() {
+        if (urlVersion !== localVersion && localVersion) {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              regs.forEach(function(r) { r.unregister(); });
+            });
+          }
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              names.forEach(function(n) { caches.delete(n); });
+            });
+          }
+          var url = new URL(window.location.href);
+          url.searchParams.set('v', localVersion);
+          window.location.replace(url.toString());
         }
-        
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name);
-            }
-          });
-        }
-        
-        const url = new URL(window.location.href);
-        url.searchParams.set('v', currentVersion);
-        window.location.replace(url.toString());
       }
+
+      if (!localVersion) {
+        applyUrlSync();
+        return;
+      }
+
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (data && data.v != null) {
+            var serverVersion = String(data.v);
+            if (serverVersion !== localVersion) {
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(r) { r.unregister(); });
+                });
+              }
+              if ('caches' in window) {
+                caches.keys().then(function(names) {
+                  names.forEach(function(n) { caches.delete(n); });
+                });
+              }
+              var url = new URL(window.location.href);
+              url.searchParams.set('v', serverVersion);
+              window.location.replace(url.toString());
+              return;
+            }
+          }
+          applyUrlSync();
+        })
+        .catch(function() { applyUrlSync(); });
     })();
   </script>
 </head>
@@ -190,7 +215,7 @@
                          window.location.hostname === '0.0.0.0';
       
       const nrdDataAccessSrc = isLocalhost 
-        ? '/nrd-data-access/dist/nrd-data-access.js?v=1770937502164'
+        ? '/nrd-data-access/dist/nrd-data-access.js?v=1771025674933'
         : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js';
       
       console.log('Loading NRD Data Access from:', nrdDataAccessSrc);
@@ -215,7 +240,7 @@
                          window.location.hostname === '0.0.0.0';
       
       const nrdCommonSrc = isLocalhost 
-        ? '/nrd-common/dist/nrd-common.js?v=1770937502164'
+        ? '/nrd-common/dist/nrd-common.js?v=1771025674933'
         : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-common@main/dist/nrd-common.js';
       
       console.log('Loading NRD Common from:', nrdCommonSrc);
@@ -343,7 +368,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js?v=1770937502164')
+        navigator.serviceWorker.register('service-worker.js?v=1771025674933')
           .then(reg => {
             console.log('Service Worker registered');
             
@@ -375,6 +400,6 @@
   </script>
 
   <!-- App.js Module -->
-  <script type="module" src="app.js?v=1770937502164"></script>
+  <script type="module" src="app.js?v=1771025674933"></script>
 </body>
 </html>

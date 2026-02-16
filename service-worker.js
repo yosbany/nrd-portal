@@ -52,6 +52,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip version.json - always fetch from network (never cache)
+  if (event.request.url.includes('version.json')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
   // Skip Firebase CDN - always fetch from network
   if (event.request.url.includes('firebasejs') || event.request.url.includes('gstatic.com')) {
     event.respondWith(fetch(event.request));

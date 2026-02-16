@@ -29,7 +29,7 @@
     // Ensure a global logger exists early so libraries can reference it safely
     window.logger = window.logger || console;
   </script>
-  <link rel="stylesheet" href="assets/styles/styles.css?v=1771201203571">
+  <link rel="stylesheet" href="assets/styles/styles.css?v=1771202242250">
   <meta name="theme-color" content="#dc2626">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
@@ -197,7 +197,7 @@
                          window.location.hostname === '0.0.0.0';
       
       const nrdDataAccessSrc = isLocalhost 
-        ? '/nrd-data-access/dist/nrd-data-access.js?v=1771201203571'
+        ? '/nrd-data-access/dist/nrd-data-access.js?v=1771202242250'
         : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js';
       
       console.log('Loading NRD Data Access from:', nrdDataAccessSrc);
@@ -222,7 +222,7 @@
                          window.location.hostname === '0.0.0.0';
       
       const nrdCommonSrc = isLocalhost 
-        ? '/nrd-common/dist/nrd-common.js?v=1771201203571'
+        ? '/nrd-common/dist/nrd-common.js?v=1771202242250'
         : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-common@main/dist/nrd-common.js';
       
       console.log('Loading NRD Common from:', nrdCommonSrc);
@@ -245,6 +245,18 @@
     (function() {
       const maxWait = 10000;
       const startTime = Date.now();
+
+      function showLoginFallback() {
+        const redirectingScreen = document.getElementById('redirecting-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+
+        // If the app is already visible, don't bring back the login screen.
+        if (appScreen && !appScreen.classList.contains('hidden')) return;
+
+        if (redirectingScreen) redirectingScreen.classList.add('hidden');
+        if (loginScreen) loginScreen.classList.remove('hidden');
+      }
       
       const checkNRDCommon = setInterval(() => {
         if (typeof window.NRDCommon !== 'undefined') {
@@ -295,52 +307,34 @@
                     console.log('AuthService initialized successfully');
                   } catch (error) {
                     console.error('Error initializing AuthService:', error);
-                    // Fallback: hide redirecting screen and show login
-                    const redirectingScreen = document.getElementById('redirecting-screen');
-                    const loginScreen = document.getElementById('login-screen');
-                    if (redirectingScreen) redirectingScreen.classList.add('hidden');
-                    if (loginScreen) loginScreen.classList.remove('hidden');
+                    // Fallback: hide redirecting screen and show login (only if app not visible)
+                    showLoginFallback();
                   }
                 } else {
                   console.error('AuthService or nrd not available');
-                  // Fallback: hide redirecting screen and show login
-                  const redirectingScreen = document.getElementById('redirecting-screen');
-                  const loginScreen = document.getElementById('login-screen');
-                  if (redirectingScreen) redirectingScreen.classList.add('hidden');
-                  if (loginScreen) loginScreen.classList.remove('hidden');
+                  // Fallback: hide redirecting screen and show login (only if app not visible)
+                  showLoginFallback();
                 }
               } else {
                 console.error('NRD Data Access initialization failed');
-                // Fallback: hide redirecting screen and show login
-                const redirectingScreen = document.getElementById('redirecting-screen');
-                const loginScreen = document.getElementById('login-screen');
-                if (redirectingScreen) redirectingScreen.classList.add('hidden');
-                if (loginScreen) loginScreen.classList.remove('hidden');
+                // Fallback: hide redirecting screen and show login (only if app not visible)
+                showLoginFallback();
               }
             }).catch(error => {
               console.error('Error initializing NRD Data Access:', error);
-              // Fallback: hide redirecting screen and show login
-              const redirectingScreen = document.getElementById('redirecting-screen');
-              const loginScreen = document.getElementById('login-screen');
-              if (redirectingScreen) redirectingScreen.classList.add('hidden');
-              if (loginScreen) loginScreen.classList.remove('hidden');
+              // Fallback: hide redirecting screen and show login (only if app not visible)
+              showLoginFallback();
             });
           } else {
             console.error('initializeNRD not available in NRDCommon');
-            // Fallback: hide redirecting screen and show login
-            const redirectingScreen = document.getElementById('redirecting-screen');
-            const loginScreen = document.getElementById('login-screen');
-            if (redirectingScreen) redirectingScreen.classList.add('hidden');
-            if (loginScreen) loginScreen.classList.remove('hidden');
+            // Fallback: hide redirecting screen and show login (only if app not visible)
+            showLoginFallback();
           }
         } else if (Date.now() - startTime >= maxWait) {
           clearInterval(checkNRDCommon);
           console.error('NRD Common Library not loaded after timeout');
-          // Fallback: hide redirecting screen and show login
-          const redirectingScreen = document.getElementById('redirecting-screen');
-          const loginScreen = document.getElementById('login-screen');
-          if (redirectingScreen) redirectingScreen.classList.add('hidden');
-          if (loginScreen) loginScreen.classList.remove('hidden');
+          // Fallback: hide redirecting screen and show login (only if app not visible)
+          showLoginFallback();
         }
       }, 100);
     })();
@@ -350,7 +344,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js?v=1771201203571')
+        navigator.serviceWorker.register('service-worker.js?v=1771202242250')
           .then(reg => {
             console.log('Service Worker registered');
             
@@ -382,6 +376,6 @@
   </script>
 
   <!-- App.js Module -->
-  <script type="module" src="app.js?v=1771201203571"></script>
+  <script type="module" src="app.js?v=1771202242250"></script>
 </body>
 </html>

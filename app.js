@@ -68,61 +68,8 @@ function switchView(viewName) {
 
 logger.info('app.js loaded, waiting for NRD to be available');
 
-function showLoginScreen() {
-  const appScreen = document.getElementById('app-screen');
-  const loginScreen = document.getElementById('login-screen');
-  const redirectingScreen = document.getElementById('redirecting-screen');
-  const loginError = document.getElementById('login-error');
-  if (appScreen) appScreen.classList.add('hidden');
-  if (redirectingScreen) redirectingScreen.classList.add('hidden');
-  if (loginScreen) loginScreen.classList.remove('hidden');
-  if (loginError) loginError.classList.add('hidden');
-}
-
-function showRedirectingScreen() {
-  const appScreen = document.getElementById('app-screen');
-  const loginScreen = document.getElementById('login-screen');
-  const redirectingScreen = document.getElementById('redirecting-screen');
-  if (appScreen) appScreen.classList.add('hidden');
-  if (loginScreen) loginScreen.classList.add('hidden');
-  if (redirectingScreen) redirectingScreen.classList.remove('hidden');
-}
-
-function setupLoginForm({ nrd }) {
-  const form = document.getElementById('login-form');
-  const emailInput = document.getElementById('login-email');
-  const passwordInput = document.getElementById('login-password');
-  const loginError = document.getElementById('login-error');
-  if (!form || !emailInput || !passwordInput) return;
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (loginError) loginError.classList.add('hidden');
-
-    const email = String(emailInput.value || '').trim();
-    const password = String(passwordInput.value || '').trim();
-    if (!email || !password) {
-      if (loginError) {
-        loginError.textContent = 'Completá email y contraseña.';
-        loginError.classList.remove('hidden');
-      }
-      return;
-    }
-
-    try {
-      showRedirectingScreen();
-      await nrd.auth.signIn(email, password);
-      // onAuthStateChanged se encargará de mostrar la app
-    } catch (error) {
-      logger.error('Login error', error);
-      showLoginScreen();
-      if (loginError) {
-        loginError.textContent = 'No se pudo iniciar sesión. Verificá tus datos e intentá de nuevo.';
-        loginError.classList.remove('hidden');
-      }
-    }
-  });
-}
+// AuthService (nrd-common) maneja login form, showLoginScreen y showRedirectingScreen.
+// app.js solo inicializa la navegación cuando el usuario está autenticado.
 
 function waitForNRDAndInitialize() {
   const maxWait = 10000;
@@ -136,26 +83,26 @@ function waitForNRDAndInitialize() {
       clearInterval(checkNRD);
       logger.info('NRD, auth, and NRDCommon available, setting up onAuthStateChanged');
 
-      setupLoginForm({ nrd });
-
-      // Si ya hay sesión, entramos directo. Si no, mostramos login.
+      // AuthService (nrd-common) maneja login/redirecting screens.
+      // app.js solo inicializa navegación cuando el usuario está autenticado.
       const currentUser = nrd.auth.getCurrentUser();
       if (currentUser) {
         logger.info('Current user found, initializing immediately', { uid: currentUser.uid, email: currentUser.email });
         initializeAppForUser(currentUser);
-      } else {
-        showLoginScreen();
       }
 
       nrd.auth.onAuthStateChanged((user) => {
         logger.info('Auth state changed', { hasUser: !!user, uid: user?.uid, email: user?.email });
-        if (user) initializeAppForUser(user);
-        else showLoginScreen();
+        if (user) {
+          initializeAppForUser(user);
+        } else {
+          // Reset para permitir re-inicialización si el usuario vuelve a autenticarse
+          appInitialized = false;
+        }
       });
     } else if (Date.now() - startTime >= maxWait) {
       clearInterval(checkNRD);
       logger.error('NRD, auth, or NRDCommon not available after timeout');
-      showLoginScreen();
     }
   }, 100);
 }

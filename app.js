@@ -162,7 +162,13 @@ function waitForNRDAndInitialize() {
 
 waitForNRDAndInitialize();
 
+let appInitialized = false;
 function initializeAppForUser(user) {
+  if (appInitialized) {
+    logger.debug('App already initialized, skipping');
+    return;
+  }
+  appInitialized = true;
   logger.info('Initializing app for user', { uid: user.uid, email: user.email });
 
   const appScreen = document.getElementById('app-screen');
@@ -176,11 +182,6 @@ function initializeAppForUser(user) {
   setTimeout(() => {
     initializeNavigation();
     switchView('inicio');
-
-    const appScreenCheck = document.getElementById('app-screen');
-    if (appScreenCheck && appScreenCheck.classList.contains('hidden')) {
-      appScreenCheck.classList.remove('hidden');
-    }
   }, 300);
 }
 

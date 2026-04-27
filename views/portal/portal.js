@@ -9,10 +9,12 @@ const isLocalhost = window.location.hostname === 'localhost' ||
 
 // Apps disponibles con URLs locales y remotas
 const APPS_CONFIG = [
+  { name: "PDV", localPath: "/nrd-pdv/", remoteUrl: "https://yosbany.github.io/nrd-pdv", icon: "🛒" },
   { name: "Pedidos", localPath: "/nrd-pedidos/", remoteUrl: "https://yosbany.github.io/nrd-pedidos", icon: "📦" },
   { name: "Gestión Operativa", localPath: "/nrd-gestion-operativa/", remoteUrl: "https://yosbany.github.io/nrd-gestion-operativa", icon: "⚙️" },
   { name: "Flujo de Caja", localPath: "/nrd-flujo-caja/", remoteUrl: "https://yosbany.github.io/nrd-flujo-caja", icon: "💰" },
   { name: "Control de Cajas", localPath: "/nrd-control-cajas/", remoteUrl: "https://yosbany.github.io/nrd-control-cajas", icon: "📊" },
+  { name: "Control de Stock", localPath: "/nrd-control-stock/", remoteUrl: "https://yosbany.github.io/nrd-control-stock", icon: "🗃️" },
   { name: "Costos", localPath: "/nrd-costos/", remoteUrl: "https://yosbany.github.io/nrd-costos", icon: "💵" },
   { name: "RRHH", localPath: "/nrd-rrhh/", remoteUrl: "https://yosbany.github.io/nrd-rrhh", icon: "👥" },
   { name: "Productos", localPath: "/nrd-productos/", remoteUrl: "https://yosbany.github.io/nrd-productos", icon: "📋" },

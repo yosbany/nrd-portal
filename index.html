@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Portal de acceso a aplicaciones NRD">
+  <title>NRD Portal</title>
+  <link rel="manifest" href="manifest.json">
+  <!-- Tailwind CSS via CDN (development) - Warning suppressed for this project architecture -->
+  <script>
+    // Suppress Tailwind CDN production warning BEFORE loading Tailwind (this project uses CDN by design)
+    (function() {
+      if (console.warn) {
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+          // Suppress Tailwind CDN production warning
+          if (args[0] && typeof args[0] === 'string' && 
+              (args[0].includes('cdn.tailwindcss.com should not be used in production') ||
+               args[0].includes('cdn.tailwindcss.com'))) {
+            return; // Suppress this specific warning
+          }
+          originalWarn.apply(console, args);
+        };
+      }
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Ensure a global logger exists early so libraries can reference it safely
+    window.logger = window.logger || console;
+  </script>
+  <link rel="stylesheet" href="assets/styles/styles.css?v=1777313688529">
+  <meta name="theme-color" content="#dc2626">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  
+  <!-- Version check: if server has newer build, force reload (no URL params) -->
+  <script>
+    (function() {
+      var RELOAD_KEY = 'nrd-version-reload-ts';
+      var RELOAD_COOLDOWN_MS = 15000;
+      var lastReload = parseInt(sessionStorage.getItem(RELOAD_KEY) || '0', 10);
+      if (Date.now() - lastReload < RELOAD_COOLDOWN_MS) return;
+
+      var link = document.querySelector('link[rel="stylesheet"][href*="assets/styles/styles.css"]') ||
+                 document.querySelector('link[rel="stylesheet"][href*=".css"]');
+      var match = link && link.href && link.href.match(/[?&]v=(\d+)/);
+      var localVersion = match ? String(match[1]) : null;
+      if (!localVersion) return;
+
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          var serverVersion = data && data.v != null ? String(data.v) : null;
+          if (!serverVersion) return; // version.json missing -> do nothing
+          if (serverVersion === localVersion) return;
+
+          sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+
+          var sw = ('serviceWorker' in navigator)
+            ? navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+              })
+            : Promise.resolve();
+
+          var cacheClear = ('caches' in window)
+            ? caches.keys().then(function(names) { names.forEach(function(n) { caches.delete(n); }); })
+            : Promise.resolve();
+
+          Promise.all([sw, cacheClear]).finally(function() {
+            window.location.reload();
+          });
+        })
+        .catch(function() {});
+    })();
+  </script>
+</head>
+<body class="bg-white text-black font-sans antialiased">
+  <!-- Loading Spinner -->
+  <div id="loading-spinner" class="fixed inset-0 bg-black/20 z-[60] hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 flex flex-col items-center gap-4 shadow-lg">
+      <div class="w-12 h-12 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin"></div>
+      <p class="text-sm text-gray-600 font-light">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Redirecting Screen -->
+  <div id="redirecting-screen" class="min-h-screen flex items-center justify-center bg-white">
+    <div class="flex flex-col items-center gap-4">
+      <div class="w-12 h-12 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin"></div>
+      <p class="text-sm text-gray-600 font-light">Redirigiendo...</p>
+    </div>
+  </div>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-6 hidden">
+    <div class="w-full max-w-sm">
+      <h1 class="text-xl sm:text-2xl font-light text-center mb-6 sm:mb-8 tracking-tight">NRD Portal</h1>
+      <form id="login-form" class="space-y-3 sm:space-y-4">
+        <input type="email" id="login-email" placeholder="Email" autocomplete="username" required 
+          class="w-full px-0 py-2.5 sm:py-3 border-0 border-b border-gray-300 focus:outline-none focus:border-red-600 bg-transparent text-sm sm:text-base">
+        <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password" required 
+          class="w-full px-0 py-2.5 sm:py-3 border-0 border-b border-gray-300 focus:outline-none focus:border-red-600 bg-transparent text-sm sm:text-base">
+        <button type="submit" 
+          class="w-full mt-4 sm:mt-6 py-2.5 sm:py-3 bg-red-600 text-white border border-red-600 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs sm:text-sm font-light">
+          Iniciar Sesión
+        </button>
+      </form>
+      <div id="login-error" class="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-red-600 hidden"></div>
+    </div>
+  </div>
+
+  <!-- Main App Screen -->
+  <div id="app-screen" class="min-h-screen flex flex-col hidden">
+    <!-- Header will be inserted here by NRDCommon -->
+    <div id="app-header-container" data-app-name="NRD Portal" data-icon-path="assets/icons/icon-192.png"></div>
+
+    <!-- Navigation will be inserted here by app.js -->
+    <nav id="app-nav-container" class="bg-white border-b border-gray-200 flex overflow-x-auto"></nav>
+
+    <main class="flex-1 p-3 sm:p-4 md:p-6 w-full">
+      <!-- Inicio View - Aplicaciones disponibles -->
+      <div id="inicio-view" class="view">
+        <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <!-- Las apps se renderizarán aquí -->
+        </div>
+      </div>
+
+      <!-- Calculadoras View -->
+      <div id="calculadoras-view" class="view space-y-3 sm:space-y-4 hidden">
+        <!-- Sub-tabs para calculadoras -->
+        <nav id="calculadoras-sub-nav" class="flex border-b border-gray-200 mb-4 overflow-x-auto">
+          <button type="button" class="calc-sub-btn px-3 sm:px-4 py-2 sm:py-2.5 border-b-2 border-red-600 text-red-600 font-medium whitespace-nowrap text-xs sm:text-sm uppercase tracking-wider" data-calc="precio-venta">
+            Precio de venta
+          </button>
+          <button type="button" class="calc-sub-btn px-3 sm:px-4 py-2 sm:py-2.5 border-b-2 border-transparent text-gray-600 hover:text-red-600 whitespace-nowrap text-xs sm:text-sm uppercase tracking-wider" data-calc="mano-obra">
+            Costo mano de obra
+          </button>
+          <button type="button" class="calc-sub-btn px-3 sm:px-4 py-2 sm:py-2.5 border-b-2 border-transparent text-gray-600 hover:text-red-600 whitespace-nowrap text-xs sm:text-sm uppercase tracking-wider" data-calc="gf-por-hora">
+            Gastos fijos por hora
+          </button>
+        </nav>
+        <!-- Contenedor de calculadoras -->
+        <div id="calculadoras-content">
+          <!-- Se renderiza dinámicamente por portal.js -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-md w-full border border-gray-200 shadow-lg">
+      <div class="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-lg sm:text-xl font-light tracking-tight">Perfil de Usuario</h3>
+        <button id="close-profile-modal" class="text-gray-400 hover:text-red-600 text-xl font-light">×</button>
+      </div>
+      <div id="profile-modal-content" class="p-4 sm:p-6 space-y-4">
+        <!-- User data will be inserted here -->
+      </div>
+      <div class="p-4 sm:p-6 border-t border-gray-200 space-y-2">
+        <a id="portal-link" href="/nrd-portal/" 
+          class="block w-full px-4 sm:px-6 py-2 bg-blue-600 text-white border border-blue-600 hover:bg-blue-700 transition-colors uppercase tracking-wider text-xs sm:text-sm font-light text-center">
+          Ir al Portal
+        </a>
+        <button id="profile-logout-btn" 
+          class="w-full px-4 sm:px-6 py-2 bg-red-600 text-white border border-red-600 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs sm:text-sm font-light">
+          Cerrar Sesión
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Modal -->
+  <div id="custom-modal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg max-w-md w-full border border-gray-200 shadow-lg">
+      <div class="p-4 sm:p-6">
+        <h3 id="modal-title" class="text-lg sm:text-xl font-light mb-3 sm:mb-4 text-black"></h3>
+        <p id="modal-message" class="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6"></p>
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <button id="modal-confirm" class="flex-1 px-4 sm:px-6 py-2 bg-red-600 text-white border border-red-600 hover:bg-red-700 transition-colors uppercase tracking-wider text-xs sm:text-sm font-light">
+            Confirmar
+          </button>
+          <button id="modal-cancel" class="flex-1 px-4 sm:px-6 py-2 border border-gray-300 hover:border-red-600 hover:text-red-600 transition-colors uppercase tracking-wider text-xs sm:text-sm font-light">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NRD Data Access Library Loading -->
+  <script>
+    (function() {
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname === '0.0.0.0';
+      
+      const nrdDataAccessSrc = isLocalhost 
+        ? '/nrd-data-access/dist/nrd-data-access.js?v=1777313688529'
+        : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-data-access@main/dist/nrd-data-access.js';
+      
+      console.log('Loading NRD Data Access from:', nrdDataAccessSrc);
+      
+      const script1 = document.createElement('script');
+      script1.src = nrdDataAccessSrc;
+      script1.onerror = function() {
+        console.error('Failed to load NRD Data Access from:', nrdDataAccessSrc);
+      };
+      script1.onload = function() {
+        console.log('NRD Data Access loaded successfully');
+      };
+      document.head.appendChild(script1);
+    })();
+  </script>
+  
+  <!-- NRD Common Library Loading -->
+  <script>
+    (function() {
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname === '0.0.0.0';
+      
+      const nrdCommonSrc = isLocalhost 
+        ? '/nrd-common/dist/nrd-common.js?v=1777313688529'
+        : 'https://cdn.jsdelivr.net/gh/yosbany/nrd-common@main/dist/nrd-common.js';
+      
+      console.log('Loading NRD Common from:', nrdCommonSrc);
+      
+      const script2 = document.createElement('script');
+      script2.src = nrdCommonSrc;
+      script2.onerror = function() {
+        console.error('Failed to load NRD Common from:', nrdCommonSrc);
+      };
+      script2.onload = function() {
+        console.log('NRD Common loaded successfully');
+      };
+      document.head.appendChild(script2);
+    })();
+  </script>
+  
+  <!-- NRD Common Library Initialization -->
+  <script>
+    // Wait for NRD Common Library to be available and initialize
+    (function() {
+      const maxWait = 10000;
+      const startTime = Date.now();
+
+      function showLoginFallback() {
+        const redirectingScreen = document.getElementById('redirecting-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+
+        // If the app is already visible, don't bring back the login screen.
+        if (appScreen && !appScreen.classList.contains('hidden')) return;
+
+        if (redirectingScreen) redirectingScreen.classList.add('hidden');
+        if (loginScreen) loginScreen.classList.remove('hidden');
+      }
+      
+      const checkNRDCommon = setInterval(() => {
+        if (typeof window.NRDCommon !== 'undefined') {
+          clearInterval(checkNRDCommon);
+          console.log('NRD Common Library loaded successfully');
+          
+          // Create logger instance FIRST, before anything else uses it
+          // This is critical because AuthService and NavigationService need it
+          window.logger = new window.NRDCommon.Logger('NRD Portal', {
+            logLevel: window.NRDCommon.LOG_LEVELS.INFO,
+            enableColors: true,
+            enableTimestamp: true
+          });
+          
+          // Expose common functions globally for backward compatibility
+          if (window.NRDCommon) {
+            window.showAlert = window.NRDCommon.showAlert;
+            window.showConfirm = window.NRDCommon.showConfirm;
+            window.showError = window.NRDCommon.showError;
+            window.showSuccess = window.NRDCommon.showSuccess;
+            window.showInfo = window.NRDCommon.showInfo;
+            window.showWarning = window.NRDCommon.showWarning;
+            window.showSpinner = window.NRDCommon.showSpinner;
+            window.hideSpinner = window.NRDCommon.hideSpinner;
+            window.formatNumber = window.NRDCommon.formatNumber;
+            window.formatCurrency = window.NRDCommon.formatCurrency;
+            window.formatDecimalWithComma = window.NRDCommon.formatDecimalWithComma;
+            window.parseDecimalWithComma = window.NRDCommon.parseDecimalWithComma;
+            window.escapeHtml = window.NRDCommon.escapeHtml;
+            window.getMonthName = window.NRDCommon.getMonthName;
+            window.formatDate = window.NRDCommon.formatDate;
+            window.isEmployeeActiveInYear = window.NRDCommon.isEmployeeActiveInYear;
+            
+            // Header is now automatically initialized by AuthService
+          }
+          
+          // Initialize NRD Data Access using NRDCommon
+          if (window.NRDCommon.initializeNRD) {
+            window.NRDCommon.initializeNRD().then(success => {
+              if (success) {
+                console.log('NRD Data Access initialized successfully');
+                
+                // Initialize AuthService immediately after NRD is ready
+                // window.logger is already created above, so AuthService can use it
+                if (window.NRDCommon.AuthService && window.nrd) {
+                  try {
+                    window.authService = new window.NRDCommon.AuthService(window.nrd);
+                    console.log('AuthService initialized successfully');
+                  } catch (error) {
+                    console.error('Error initializing AuthService:', error);
+                    // Fallback: hide redirecting screen and show login (only if app not visible)
+                    showLoginFallback();
+                  }
+                } else {
+                  console.error('AuthService or nrd not available');
+                  // Fallback: hide redirecting screen and show login (only if app not visible)
+                  showLoginFallback();
+                }
+              } else {
+                console.error('NRD Data Access initialization failed');
+                // Fallback: hide redirecting screen and show login (only if app not visible)
+                showLoginFallback();
+              }
+            }).catch(error => {
+              console.error('Error initializing NRD Data Access:', error);
+              // Fallback: hide redirecting screen and show login (only if app not visible)
+              showLoginFallback();
+            });
+          } else {
+            console.error('initializeNRD not available in NRDCommon');
+            // Fallback: hide redirecting screen and show login (only if app not visible)
+            showLoginFallback();
+          }
+        } else if (Date.now() - startTime >= maxWait) {
+          clearInterval(checkNRDCommon);
+          console.error('NRD Common Library not loaded after timeout');
+          // Fallback: hide redirecting screen and show login (only if app not visible)
+          showLoginFallback();
+        }
+      }, 100);
+    })();
+  </script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js?v=1777313688529')
+          .then(reg => {
+            console.log('Service Worker registered');
+            
+            // Check for updates every time
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker available, reload page
+                  console.log('New service worker available, reloading...');
+                  window.location.reload();
+                }
+              });
+            });
+            
+            // Check for updates periodically
+            setInterval(() => {
+              reg.update();
+            }, 60000); // Check every minute
+            
+            // Force update on page load
+            reg.update();
+          })
+          .catch(err => {
+            console.log('Service Worker registration failed:', err);
+          });
+      });
+    }
+  </script>
+
+  <!-- App.js Module -->
+  <script type="module" src="app.js?v=1777313688529"></script>
+</body>
+</html>

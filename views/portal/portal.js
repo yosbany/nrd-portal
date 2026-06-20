@@ -2,34 +2,37 @@
 
 const logger = window.logger || console;
 
-// Detect if we're on localhost
-const isLocalhost = window.location.hostname === 'localhost' || 
-                   window.location.hostname === '127.0.0.1' ||
-                   window.location.hostname === '0.0.0.0';
+function buildAppsList() {
+  const NC = window.NRDCommon;
+  if (NC?.PORTAL_APPS && typeof NC.getAppUrl === 'function') {
+    return NC.PORTAL_APPS.map((app) => ({
+      name: app.name,
+      url: NC.getAppUrl(app.key),
+      icon: app.icon
+    }));
+  }
 
-// Apps disponibles con URLs locales y remotas
-const APPS_CONFIG = [
-  { name: "PDV", localPath: "/nrd-pdv/", remoteUrl: "https://yosbany.github.io/nrd-pdv", icon: "🛒" },
-  { name: "Pedidos", localPath: "/nrd-pedidos/", remoteUrl: "https://yosbany.github.io/nrd-pedidos", icon: "📦" },
-  { name: "Gestión Operativa", localPath: "/nrd-gestion-operativa/", remoteUrl: "https://yosbany.github.io/nrd-gestion-operativa", icon: "⚙️" },
-  { name: "Flujo de Caja", localPath: "/nrd-flujo-caja/", remoteUrl: "https://yosbany.github.io/nrd-flujo-caja", icon: "💰" },
-  { name: "Control de Cajas", localPath: "/nrd-control-cajas/", remoteUrl: "https://yosbany.github.io/nrd-control-cajas", icon: "📊" },
-  { name: "Control de Stock", localPath: "/nrd-control-stock/", remoteUrl: "https://yosbany.github.io/nrd-control-stock", icon: "🗃️" },
-  { name: "Costos", localPath: "/nrd-costos/", remoteUrl: "https://yosbany.github.io/nrd-costos", icon: "💵" },
-  { name: "RRHH", localPath: "/nrd-rrhh/", remoteUrl: "https://yosbany.github.io/nrd-rrhh", icon: "👥" },
-  { name: "Productos", localPath: "/nrd-productos/", remoteUrl: "https://yosbany.github.io/nrd-productos", icon: "📋" },
-  { name: "Compras", localPath: "/nrd-compras/", remoteUrl: "https://yosbany.github.io/nrd-compras", icon: "🛒" },
-  { name: "Catálogo", localPath: "/nrd-catalogo/", remoteUrl: "https://yosbany.github.io/nrd-catalogo", icon: "📚" },
-  { name: "Web", localPath: "/nrd-web/", remoteUrl: "https://web.nrdonline.site/", icon: "🌐" },
-  { name: "Administración de Datos", localPath: "/nrd-data-access/", remoteUrl: "https://yosbany.github.io/nrd-data-access", icon: "🗄️" }
-];
+  const isLocalhost = window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0';
+  const base = (key, local, remote) => (isLocalhost ? local : remote);
 
-// Generate APPS array with correct URLs based on environment
-const APPS = APPS_CONFIG.map(app => ({
-  name: app.name,
-  url: isLocalhost ? app.localPath : app.remoteUrl,
-  icon: app.icon
-}));
+  return [
+    { name: 'PDV', url: base('pdv', '/nrd-pdv/', 'https://pdv.nrdonline.site/'), icon: '🛒' },
+    { name: 'Pedidos', url: base('pedidos', '/nrd-pedidos/', 'https://pedidos.nrdonline.site/'), icon: '📦' },
+    { name: 'Gestión Operativa', url: base('operativa', '/nrd-gestion-operativa/', 'https://operativa.nrdonline.site/'), icon: '⚙️' },
+    { name: 'Flujo de Caja', url: base('flujo', '/nrd-flujo-caja/', 'https://flujo.nrdonline.site/'), icon: '💰' },
+    { name: 'Control de Cajas', url: base('cajas', '/nrd-control-cajas/', 'https://cajas.nrdonline.site/'), icon: '📊' },
+    { name: 'Control de Stock', url: base('stock', '/nrd-control-stock/', 'https://stock.nrdonline.site/'), icon: '🗃️' },
+    { name: 'Costos', url: base('costos', '/nrd-costos/', 'https://costos.nrdonline.site/'), icon: '💵' },
+    { name: 'RRHH', url: base('rrhh', '/nrd-rrhh/', 'https://rrhh.nrdonline.site/'), icon: '👥' },
+    { name: 'Productos', url: base('productos', '/nrd-productos/', 'https://productos.nrdonline.site/'), icon: '📋' },
+    { name: 'Compras', url: base('compras', '/nrd-compras/', 'https://compras.nrdonline.site/'), icon: '🛒' },
+    { name: 'Catálogo', url: base('catalogo', '/nrd-catalogo/', 'https://catalogo.nrdonline.site/'), icon: '📚' },
+    { name: 'Web', url: base('web', '/nrd-web/', 'https://web.nrdonline.site/'), icon: '🌐' },
+    { name: 'Administración de Datos', url: base('datos', '/nrd-data-access/', 'https://datos.nrdonline.site/'), icon: '🗄️' }
+  ];
+}
 
 /**
  * Initialize Inicio view (apps grid)
@@ -787,6 +790,7 @@ function setupGFPorHoraHandlers(opts) {
  * Render apps grid
  */
 function renderApps() {
+  const APPS = buildAppsList();
   logger.debug('Rendering apps grid', { appCount: APPS.length });
   const appsGrid = document.getElementById('apps-grid');
   

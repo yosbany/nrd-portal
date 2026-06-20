@@ -66,72 +66,15 @@ function switchView(viewName) {
   }
 }
 
-logger.info('app.js loaded, waiting for NRD to be available');
+logger.info('app.js loaded');
 
-// AuthService (nrd-common) maneja login form, showLoginScreen y showRedirectingScreen.
-// app.js solo inicializa la navegación cuando el usuario está autenticado.
-
-function waitForNRDAndInitialize() {
-  const maxWait = 10000;
-  const startTime = Date.now();
-
-  const checkNRD = setInterval(() => {
-    const nrd = window.nrd;
-    const NRDCommon = window.NRDCommon;
-
-    if (nrd && nrd.auth && NRDCommon) {
-      clearInterval(checkNRD);
-      logger.info('NRD, auth, and NRDCommon available, setting up onAuthStateChanged');
-
-      // AuthService (nrd-common) maneja login/redirecting screens.
-      // app.js solo inicializa navegación cuando el usuario está autenticado.
-      const currentUser = nrd.auth.getCurrentUser();
-      if (currentUser) {
-        logger.info('Current user found, initializing immediately', { uid: currentUser.uid, email: currentUser.email });
-        initializeAppForUser(currentUser);
-      }
-
-      nrd.auth.onAuthStateChanged((user) => {
-        logger.info('Auth state changed', { hasUser: !!user, uid: user?.uid, email: user?.email });
-        if (user) {
-          initializeAppForUser(user);
-        } else {
-          // Reset para permitir re-inicialización si el usuario vuelve a autenticarse
-          appInitialized = false;
-        }
-      });
-    } else if (Date.now() - startTime >= maxWait) {
-      clearInterval(checkNRD);
-      logger.error('NRD, auth, or NRDCommon not available after timeout');
-    }
-  }, 100);
-}
-
-waitForNRDAndInitialize();
-
-let appInitialized = false;
 function initializeAppForUser(user) {
-  if (appInitialized) {
-    logger.debug('App already initialized, skipping');
-    return;
-  }
-  appInitialized = true;
   logger.info('Initializing app for user', { uid: user.uid, email: user.email });
-
-  const appScreen = document.getElementById('app-screen');
-  const loginScreen = document.getElementById('login-screen');
-  const redirectingScreen = document.getElementById('redirecting-screen');
-
-  if (appScreen) appScreen.classList.remove('hidden');
-  if (loginScreen) loginScreen.classList.add('hidden');
-  if (redirectingScreen) redirectingScreen.classList.add('hidden');
-
-  setTimeout(() => {
-    initializeNavigation();
-    switchView('inicio');
-  }, 300);
+  initializeNavigation();
+  switchView('inicio');
 }
 
-// AuthService is now initialized in index.html after NRDCommon loads
-// This ensures it handles the redirecting screen immediately
-// We don't need to initialize it here since it's already done in index.html
+(window.NRDCommon?.startApp || function(fn, opts) {
+  window.__nrdStartQueue = window.__nrdStartQueue || [];
+  window.__nrdStartQueue.push({ onReady: fn, options: opts || {} });
+})(initializeAppForUser, { initDelay: 300 });

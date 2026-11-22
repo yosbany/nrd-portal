@@ -21,7 +21,6 @@ function buildAppsList() {
     { name: 'PDV', url: base('pdv', '/nrd-pdv/', 'https://pdv.nrdonline.site/'), icon: '🛒' },
     { name: 'Pedidos', url: base('pedidos', '/nrd-pedidos/', 'https://pedidos.nrdonline.site/'), icon: '📦' },
     { name: 'Gestión Operativa', url: base('operativa', '/nrd-gestion-operativa/', 'https://operativa.nrdonline.site/'), icon: '⚙️' },
-    { name: 'Flujo de Caja', url: base('flujo', '/nrd-flujo-caja/', 'https://flujo.nrdonline.site/'), icon: '💰' },
     { name: 'Control de Cajas', url: base('cajas', '/nrd-control-cajas/', 'https://cajas.nrdonline.site/'), icon: '📊' },
     { name: 'Control de Stock', url: base('stock', '/nrd-control-stock/', 'https://stock.nrdonline.site/'), icon: '🗃️' },
     { name: 'Costos', url: base('costos', '/nrd-costos/', 'https://costos.nrdonline.site/'), icon: '💵' },
